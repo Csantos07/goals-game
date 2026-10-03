@@ -12,11 +12,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .top h1{font-size:clamp(32px,8vw,52px);line-height:.98;letter-spacing:-.05em;margin:0;max-width:480px}
 .top h1 span{color:var(--accent)}
 .sub{color:var(--muted);margin:10px 0 0}
-.themeButton{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:16px;padding:10px 12px;font-weight:800;cursor:pointer}
-.streak{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px 13px;text-align:center;min-width:82px}
-.streak b{font-size:22px;margin-left:4px}
-.streak small{display:block;color:var(--muted);font-size:10px}
-.themePanel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin:0 0 16px;display:grid;gap:14px}
+.menuButton{width:44px;height:44px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:14px;font-size:22px;cursor:pointer}
+.navMenu{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px;margin:0 0 16px;display:grid;gap:8px}
+.navItem{display:flex;justify-content:space-between;align-items:center;gap:16px;width:100%;padding:12px 14px;border:1px solid transparent;background:transparent;color:var(--text);border-radius:12px;cursor:pointer;text-align:left}
+.navItem:hover,.activeNav{background:var(--soft);border-color:var(--line)}
+.navItem small{color:var(--muted)}
+.settingsPanel{border-top:1px solid var(--line);padding:14px 4px 4px;display:grid;gap:14px}
 .modeSwitch,.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .modeSwitch button,.seg button{padding:11px 12px;border-radius:12px;border:1px solid var(--buttonLine);background:var(--soft);color:var(--text);cursor:pointer}
 .modeSwitch .selected,.seg .selected{border-color:var(--accent);color:var(--accent)}
@@ -34,13 +35,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .score em{display:inline;font-size:11px}
 .versus{display:flex;flex-direction:column;justify-content:center;text-align:center;color:var(--muted);font-size:10px}
 .versus b{color:var(--text);font-size:12px}
-.card,.progressCard,.winningsCard{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;margin-top:14px}
-.winningsCard{display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(135deg,var(--card),var(--card2))}
-.winningsCard h2{margin:0;font-size:22px;letter-spacing:-.03em}
-.potCopy{margin:7px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
-.potBalance{min-width:132px;border:1px solid var(--line);background:var(--soft);border-radius:18px;padding:13px 15px;text-align:right}
-.potBalance small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
-.potBalance strong{display:block;color:var(--accent);font-size:30px;line-height:1.05;margin-top:5px}
+.card,.progressCard{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;margin-top:14px}
+.envelopeChip{width:100%;display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:16px;padding:11px 13px;margin:0 0 4px;cursor:pointer;text-align:left}
+.envelopeChip small{display:block;color:var(--muted);font-size:11px}
+.envelopeChip strong{display:block;font-size:17px;margin-top:1px}
+.envelopeIcon{width:34px;height:34px;border-radius:10px;background:var(--soft);display:grid;place-items:center;color:var(--accent);font-weight:900}
+.chevron{margin-left:auto;color:var(--muted);font-size:24px}
 .sectionHead{display:flex;justify-content:space-between;gap:12px;align-items:center}
 .sectionHead h2,.modal h2{margin:0;font-size:22px;letter-spacing:-.03em}
 .add{background:var(--button);border:1px solid var(--buttonLine);color:var(--text);border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer}
@@ -90,17 +90,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 @media(max-width:520px){
   .shell{padding-top:18px}
   .top{margin-bottom:16px}
-  .streak{display:none}
-  .themeButton{padding:9px 10px}
   .scoreboard{grid-template-columns:1fr 40px 1fr}
   .score{padding:12px 10px;gap:7px}
   .avatar{width:31px;height:31px}
   .score strong{font-size:25px}
   .score em{display:block}
   .sectionHead{align-items:flex-end}
-  .winningsCard{align-items:flex-start}
-  .potBalance{min-width:112px;padding:11px 12px}
-  .potBalance strong{font-size:25px}
   .goalTop{align-items:flex-start}
   .pts{font-size:14px}
   .goalActions{flex-direction:column}
@@ -108,3 +103,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   .day{padding:7px 1px}
   .day span{font-size:9px}
 }
+
+.modalHead{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.modalClose{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--soft);color:var(--text);font-size:22px;cursor:pointer}
+.envelopeModal{display:grid;gap:14px}
+.envelopeRow{display:flex;align-items:center;gap:12px;width:100%;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:16px;padding:14px;text-align:left}
+.envelopeName{flex:1}
+.envelopeName b,.envelopeName small{display:block}
+.envelopeName small{color:var(--muted);margin-top:3px}
+.envelopeRow>strong{font-size:20px;color:var(--accent)}
+.envelopeHint{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
