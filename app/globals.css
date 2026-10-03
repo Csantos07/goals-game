@@ -6,20 +6,29 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .appFrame{--bg:#0b0d12;--bgGlow:#222836;--card:#151821;--card2:#1b1f2a;--text:#f7f7f8;--muted:#969cab;--line:#292e3b;--button:#252a36;--buttonLine:#343a48;--modal:#171a22;--input:#0f1117;--soft:#20242e;min-height:100vh;background:radial-gradient(circle at 50% -10%,var(--bgGlow) 0,var(--bg) 36%);color:var(--text);transition:background .25s,color .25s}
 .appFrame[data-theme="light"]{--bg:#f5f6f8;--bgGlow:#ffffff;--card:#ffffff;--card2:#f2f3f6;--text:#15171c;--muted:#6f7581;--line:#d9dde5;--button:#eceef2;--buttonLine:#d4d8e0;--modal:#ffffff;--input:#f7f8fa;--soft:#eceef2}
 .shell{width:min(720px,100%);margin:auto;min-height:100vh;padding:32px 18px 60px}
-.top{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:14px 2px 20px;padding-left:34px}
+.top{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:14px 2px 20px;padding-left:22px}
 .topActions{display:flex;gap:8px;align-items:stretch}
 .eyebrow{font-size:11px;letter-spacing:.16em;font-weight:800;color:var(--accent);margin:0 0 7px}
 .top h1{font-size:clamp(32px,8vw,52px);line-height:.98;letter-spacing:-.05em;margin:0;max-width:480px}
 .top h1 span{color:var(--accent)}
 .sub{color:var(--muted);margin:10px 0 0}
-.menuButton{width:40px;height:40px;border:0;background:transparent;color:var(--text);border-radius:12px;font-size:24px;cursor:pointer;display:grid;place-items:center;text-shadow:0 1px 10px rgba(0,0,0,.25)}
-.menuOverlay{position:absolute;left:-10px;top:-3px;z-index:2}
-.menuButton:hover{background:color-mix(in srgb,var(--card) 55%,transparent)}
-.navMenu{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px;margin:0 0 16px;display:grid;gap:8px}
-.navItem{display:flex;justify-content:space-between;align-items:center;gap:16px;width:100%;padding:12px 14px;border:1px solid transparent;background:transparent;color:var(--text);border-radius:12px;cursor:pointer;text-align:left}
-.navItem:hover,.activeNav{background:var(--soft);border-color:var(--line)}
-.navItem small{color:var(--muted)}
-.settingsPanel{border-top:1px solid var(--line);padding:14px 4px 4px;display:grid;gap:14px}
+.menuButton{position:fixed;width:58px;height:58px;border:0;background:transparent;color:var(--text);font-size:34px;line-height:1;cursor:pointer;display:grid;place-items:center;z-index:40;transition:opacity .22s ease,transform .22s ease,color .22s ease}
+.menuButton span{display:block;transform:translateY(-1px)}
+.menuOverlay{left:8px;top:14px}
+.menuButton:hover{background:transparent}
+.menuButton.hidden{opacity:0;transform:translateY(-18px);pointer-events:none}
+.menuButton.visible{opacity:.72}
+.menuButton.open{color:#fff;opacity:1}
+.fullScreenMenu{position:fixed;inset:0;z-index:30;background:var(--accent);color:#fff;transform:translateY(-102%);transition:transform .42s cubic-bezier(.22,1,.36,1);overflow:auto}
+.fullScreenMenu.open{transform:translateY(0)}
+.fullScreenNav{min-height:100vh;width:min(720px,100%);margin:auto;padding:120px 24px 70px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:22px}
+.fullScreenNav button{border:0;background:transparent;color:#fff;padding:0;font-size:clamp(38px,11vw,74px);font-weight:700;letter-spacing:-.055em;line-height:.94;cursor:pointer;text-align:left}
+.fullScreenNav button:hover{opacity:.72}
+.fullScreenSettings{width:min(720px,100%);margin:-150px auto 0;padding:0 24px 50px;display:grid;gap:20px}
+.wordSwitch{display:flex;gap:20px}
+.wordSwitch button{border:0!important;background:transparent!important;color:#fff!important;padding:0!important;font-size:18px}
+.wordSwitch .selected{text-decoration:underline;text-underline-offset:6px}
+.fullScreenSettings .customColor{color:#fff}
 .modeSwitch,.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .modeSwitch button,.seg button{padding:11px 12px;border-radius:12px;border:1px solid var(--buttonLine);background:var(--soft);color:var(--text);cursor:pointer}
 .modeSwitch .selected,.seg .selected{border-color:var(--accent);color:var(--accent)}
@@ -136,3 +145,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .emptyEnvelope>span:first-child{width:34px;height:34px;border-radius:10px;background:var(--soft);display:grid;place-items:center}
 .emptyEnvelope b,.emptyEnvelope small{display:block}
 .emptyEnvelope small{margin-top:3px}
+
+@media(max-width:520px){
+  .top{padding-left:18px}
+  .menuButton{width:62px;height:62px;font-size:36px;left:4px;top:8px}
+  .fullScreenNav{padding:110px 20px 60px;gap:18px}
+  .fullScreenSettings{margin-top:-130px;padding:0 20px 40px}
+}
