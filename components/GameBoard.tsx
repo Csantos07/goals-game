@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type Player = "Carlo" | "Lindsey";
 type AssignedBy = "self" | "partner";
@@ -22,6 +22,7 @@ const DAYS: DayKey[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const ONE_TIME_POINTS = 50;
 const DAILY_POINTS = 10;
 const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
+const STORAGE_KEY = "goals-game:v1";
 
 const initialGoals: Goal[] = [
   { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
@@ -87,6 +88,43 @@ export default function GameBoard() {
   const [showTheme, setShowTheme] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
+  const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as {
+          goals?: Goal[];
+          active?: Player;
+          themeMode?: ThemeMode;
+          accent?: string;
+        };
+
+        if (Array.isArray(parsed.goals)) setGoals(parsed.goals);
+        if (parsed.active === "Carlo" || parsed.active === "Lindsey") setActive(parsed.active);
+        if (parsed.themeMode === "dark" || parsed.themeMode === "light") setThemeMode(parsed.themeMode);
+        if (typeof parsed.accent === "string") setAccent(parsed.accent);
+      }
+    } catch (error) {
+      console.warn("Could not load saved Goals Game data.", error);
+    } finally {
+      setHasLoadedSavedState(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedSavedState) return;
+
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ goals, active, themeMode, accent })
+      );
+    } catch (error) {
+      console.warn("Could not save Goals Game data.", error);
+    }
+  }, [goals, active, themeMode, accent, hasLoadedSavedState]);
 
   const today = getCurrentDayKey();
   const weekLabel = getWeekLabel();
