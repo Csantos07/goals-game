@@ -1,76 +1,100 @@
 *{box-sizing:border-box}
-:root{--bg:#0b0d12;--card:#151821;--card2:#1b1f2a;--text:#f7f7f8;--muted:#969cab;--line:#292e3b;--accent:#c9ff54;--accent2:#9ee52a}
-body{margin:0;background:radial-gradient(circle at 50% -10%,#222836 0,#0b0d12 36%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+:root{--accent:#c9ff54;--accent-contrast:#10120c}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 button,input{font:inherit}
 button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.appFrame{--bg:#0b0d12;--bgGlow:#222836;--card:#151821;--card2:#1b1f2a;--text:#f7f7f8;--muted:#969cab;--line:#292e3b;--button:#252a36;--buttonLine:#343a48;--modal:#171a22;--input:#0f1117;--soft:#20242e;min-height:100vh;background:radial-gradient(circle at 50% -10%,var(--bgGlow) 0,var(--bg) 36%);color:var(--text);transition:background .25s,color .25s}
+.appFrame[data-theme="light"]{--bg:#f5f6f8;--bgGlow:#ffffff;--card:#ffffff;--card2:#f2f3f6;--text:#15171c;--muted:#6f7581;--line:#d9dde5;--button:#eceef2;--buttonLine:#d4d8e0;--modal:#ffffff;--input:#f7f8fa;--soft:#eceef2}
 .shell{width:min(720px,100%);margin:auto;min-height:100vh;padding:32px 18px 60px}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:14px 2px 28px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:14px 2px 20px}
+.topActions{display:flex;gap:8px;align-items:stretch}
 .eyebrow{font-size:11px;letter-spacing:.16em;font-weight:800;color:var(--accent);margin:0 0 7px}
 .top h1{font-size:clamp(32px,8vw,52px);line-height:.98;letter-spacing:-.05em;margin:0;max-width:480px}
 .top h1 span{color:var(--accent)}
 .sub{color:var(--muted);margin:10px 0 0}
+.themeButton{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:16px;padding:10px 12px;font-weight:800;cursor:pointer}
 .streak{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px 13px;text-align:center;min-width:82px}
 .streak b{font-size:22px;margin-left:4px}
 .streak small{display:block;color:var(--muted);font-size:10px}
+.themePanel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin:0 0 16px;display:grid;gap:14px}
+.modeSwitch,.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modeSwitch button,.seg button{padding:11px 12px;border-radius:12px;border:1px solid var(--buttonLine);background:var(--soft);color:var(--text);cursor:pointer}
+.modeSwitch .selected,.seg .selected{border-color:var(--accent);color:var(--accent)}
+.swatches{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.swatch{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}
+.swatch.selected{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
+.customColor{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;font-weight:700}
+.customColor input{width:38px;height:34px;border:0;background:transparent;padding:0;cursor:pointer}
 .scoreboard{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;margin-bottom:18px}
 .score{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:20px;padding:14px;text-align:left;display:flex;gap:10px;align-items:center;cursor:pointer}
 .score.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#111;display:grid;place-items:center;font-weight:900}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-contrast);display:grid;place-items:center;font-weight:900}
 .score small,.score em{display:block;color:var(--muted);font-style:normal}
 .score strong{font-size:30px;line-height:1;margin-right:4px}
 .score em{display:inline;font-size:11px}
 .versus{display:flex;flex-direction:column;justify-content:center;text-align:center;color:var(--muted);font-size:10px}
-.versus b{color:#fff;font-size:12px}
-.card,.progressCard{background:rgba(21,24,33,.94);border:1px solid var(--line);border-radius:24px;padding:18px;margin-top:14px}
+.versus b{color:var(--text);font-size:12px}
+.card,.progressCard{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;margin-top:14px}
 .sectionHead{display:flex;justify-content:space-between;gap:12px;align-items:center}
 .sectionHead h2,.modal h2{margin:0;font-size:22px;letter-spacing:-.03em}
-.add{background:#252a36;border:1px solid #343a48;color:#fff;border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer}
-.goals{display:grid;gap:10px;margin-top:18px}
+.add{background:var(--button);border:1px solid var(--buttonLine);color:var(--text);border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer}
+.goalSection{margin-top:22px}
+.goalSection+.goalSection{padding-top:22px;border-top:1px solid var(--line)}
+.goalSectionHead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.goalSectionHead h3{margin:0;font-size:17px}
+.goalSectionHead p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.miniAdd{border:1px solid var(--line);background:var(--soft);color:var(--text);border-radius:10px;width:34px;height:34px;cursor:pointer}
+.goals{display:grid;gap:10px;margin-top:11px}
+.emptyGoals{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:14px;padding:16px;cursor:pointer}
 .goalCard{border:1px solid var(--line);background:var(--card2);border-radius:18px;padding:14px}
 .goalCard.done{opacity:.72}
 .goalCard.done .goalText b{text-decoration:line-through}
-.goalTop{display:flex;align-items:center;gap:12px}
-.check,.repeatMark{height:30px;width:30px;flex:0 0 30px;border-radius:9px;border:2px solid #4c5363;display:grid;place-items:center;font-weight:900}
-.check{background:transparent;color:#111;cursor:pointer}
+.goalTop{display:flex;align-items:center;gap:10px}
+.check,.repeatMark{height:30px;width:30px;flex:0 0 30px;border-radius:9px;border:2px solid var(--line);display:grid;place-items:center;font-weight:900}
+.check{background:transparent;color:var(--accent-contrast);cursor:pointer}
 .goalCard.done .check{background:var(--accent);border-color:var(--accent)}
-.repeatMark{color:var(--accent);border-color:#414858;background:#20242e}
+.repeatMark{color:var(--accent);background:var(--soft)}
 .goalText{flex:1;min-width:0}
 .goalText b,.goalText small{display:block}
 .goalText b{overflow-wrap:anywhere}
 .goalText small{color:var(--muted);margin-top:4px}
-.pts{font-weight:900;color:var(--accent);font-size:17px;white-space:nowrap}
+.pts{font-weight:900;color:var(--accent);font-size:16px;white-space:nowrap}
+.goalActions{display:flex;gap:4px}
+.goalActions button{width:30px;height:30px;border:1px solid var(--line);background:var(--soft);color:var(--muted);border-radius:9px;cursor:pointer}
+.goalActions button:hover{color:var(--text);border-color:var(--accent)}
 .dayRow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:13px}
-.day{min-width:0;border:1px solid #343a48;background:#20242e;color:#cfd3dc;border-radius:11px;padding:7px 2px;cursor:pointer}
+.day{min-width:0;border:1px solid var(--line);background:var(--soft);color:var(--text);border-radius:11px;padding:7px 2px;cursor:pointer}
 .day span,.day b{display:block}
 .day span{font-size:10px;color:var(--muted)}
 .day b{font-size:12px;margin-top:3px}
-.day.complete{background:var(--accent);border-color:var(--accent);color:#10120c}
-.day.complete span{color:#30351e}
+.day.complete{background:var(--accent);border-color:var(--accent);color:var(--accent-contrast)}
+.day.complete span{color:var(--accent-contrast);opacity:.72}
 .day.today{box-shadow:0 0 0 1px var(--accent) inset}
 .progressCard b{font-size:18px}
-.bar{height:10px;background:#292e3a;border-radius:999px;overflow:hidden;margin:15px 0 10px}
-.bar span{height:100%;display:block;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:999px;transition:width .25s}
+.bar{height:10px;background:var(--soft);border-radius:999px;overflow:hidden;margin:15px 0 10px}
+.bar span{height:100%;display:block;background:var(--accent);border-radius:999px;transition:width .25s}
 .motivate{color:var(--muted);font-size:13px;margin:0}
-.closeWeek,.primary{width:100%;border:0;border-radius:16px;background:var(--accent);color:#10120c;font-weight:900;font-size:15px;padding:16px;margin-top:14px;cursor:pointer}
-.modalBack{position:fixed;inset:0;background:#000b;display:grid;place-items:end center;padding:16px;z-index:5}
-.modal{width:min(620px,100%);background:#171a22;border:1px solid #353a47;border-radius:26px;padding:22px;margin-bottom:8px}
+.closeWeek,.primary{width:100%;border:0;border-radius:16px;background:var(--accent);color:var(--accent-contrast);font-weight:900;font-size:15px;padding:16px;margin-top:14px;cursor:pointer}
+.modalBack{position:fixed;inset:0;background:#0009;display:grid;place-items:end center;padding:16px;z-index:5}
+.modal{width:min(620px,100%);background:var(--modal);border:1px solid var(--line);border-radius:26px;padding:22px;margin-bottom:8px;color:var(--text)}
 .modal label{display:block;color:var(--muted);font-size:12px;font-weight:700;margin-top:17px}
-.modal input{display:block;width:100%;margin-top:7px;background:#0f1117;border:1px solid #343947;color:#fff;border-radius:12px;padding:13px;font-size:16px}
+.modal input[type="text"],.modal input:not([type]){display:block;width:100%;margin-top:7px;background:var(--input);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:13px;font-size:16px}
 .choiceLabel{color:var(--muted);font-size:12px;font-weight:700;margin:17px 0 7px}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.seg button{padding:12px;border-radius:12px;border:1px solid #353b48;background:#20242e;color:#fff;cursor:pointer}
-.seg .selected{border-color:var(--accent);color:var(--accent)}
 .scoreHint{color:var(--muted);font-size:12px;line-height:1.45;margin:12px 2px 0}
 @media(max-width:520px){
   .shell{padding-top:18px}
-  .top{margin-bottom:20px}
+  .top{margin-bottom:16px}
   .streak{display:none}
+  .themeButton{padding:9px 10px}
   .scoreboard{grid-template-columns:1fr 40px 1fr}
   .score{padding:12px 10px;gap:7px}
   .avatar{width:31px;height:31px}
   .score strong{font-size:25px}
   .score em{display:block}
   .sectionHead{align-items:flex-end}
+  .goalTop{align-items:flex-start}
+  .pts{font-size:14px}
+  .goalActions{flex-direction:column}
   .dayRow{gap:4px}
   .day{padding:7px 1px}
   .day span{font-size:9px}
