@@ -6,13 +6,15 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .appFrame{--bg:#0b0d12;--bgGlow:#222836;--card:#151821;--card2:#1b1f2a;--text:#f7f7f8;--muted:#969cab;--line:#292e3b;--button:#252a36;--buttonLine:#343a48;--modal:#171a22;--input:#0f1117;--soft:#20242e;min-height:100vh;background:radial-gradient(circle at 50% -10%,var(--bgGlow) 0,var(--bg) 36%);color:var(--text);transition:background .25s,color .25s}
 .appFrame[data-theme="light"]{--bg:#f5f6f8;--bgGlow:#ffffff;--card:#ffffff;--card2:#f2f3f6;--text:#15171c;--muted:#6f7581;--line:#d9dde5;--button:#eceef2;--buttonLine:#d4d8e0;--modal:#ffffff;--input:#f7f8fa;--soft:#eceef2}
 .shell{width:min(720px,100%);margin:auto;min-height:100vh;padding:32px 18px 60px}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:14px 2px 20px}
+.top{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:14px 2px 20px;padding-left:34px}
 .topActions{display:flex;gap:8px;align-items:stretch}
 .eyebrow{font-size:11px;letter-spacing:.16em;font-weight:800;color:var(--accent);margin:0 0 7px}
 .top h1{font-size:clamp(32px,8vw,52px);line-height:.98;letter-spacing:-.05em;margin:0;max-width:480px}
 .top h1 span{color:var(--accent)}
 .sub{color:var(--muted);margin:10px 0 0}
-.menuButton{width:44px;height:44px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:14px;font-size:22px;cursor:pointer}
+.menuButton{width:40px;height:40px;border:0;background:transparent;color:var(--text);border-radius:12px;font-size:24px;cursor:pointer;display:grid;place-items:center;text-shadow:0 1px 10px rgba(0,0,0,.25)}
+.menuOverlay{position:absolute;left:-10px;top:-3px;z-index:2}
+.menuButton:hover{background:color-mix(in srgb,var(--card) 55%,transparent)}
 .navMenu{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px;margin:0 0 16px;display:grid;gap:8px}
 .navItem{display:flex;justify-content:space-between;align-items:center;gap:16px;width:100%;padding:12px 14px;border:1px solid transparent;background:transparent;color:var(--text);border-radius:12px;cursor:pointer;text-align:left}
 .navItem:hover,.activeNav{background:var(--soft);border-color:var(--line)}
@@ -113,3 +115,24 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .envelopeName small{color:var(--muted);margin-top:3px}
 .envelopeRow>strong{font-size:20px;color:var(--accent)}
 .envelopeHint{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+
+.vacationTile{width:100%;display:flex;align-items:center;gap:13px;border:1px solid var(--line);background:linear-gradient(135deg,var(--card),var(--card2));color:var(--text);border-radius:22px;padding:16px 17px;margin:14px 0 0;cursor:pointer;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.vacationTile:hover{border-color:var(--accent)}
+.vacationTileIcon{width:42px;height:42px;border-radius:13px;background:var(--soft);display:grid;place-items:center;color:var(--accent);font-size:18px}
+.vacationTileText{flex:1;min-width:0}
+.vacationTileText small,.vacationTileText b{display:block}
+.vacationTileText small{font-size:10px;letter-spacing:.14em;color:var(--muted);font-weight:800}
+.vacationTileText b{font-size:18px;margin-top:3px}
+.vacationTile>strong{font-size:22px;color:var(--accent)}
+.vacationTileArrow{font-size:26px;color:var(--muted);margin-left:2px}
+.envelopePage{position:fixed;inset:0;z-index:20;background:var(--bg);color:var(--text);overflow:auto}
+.envelopePageInner{width:min(720px,100%);margin:auto;min-height:100vh;padding:28px 18px 60px}
+.backButton{border:0;background:transparent;color:var(--muted);padding:8px 0;margin-bottom:24px;font-weight:700;cursor:pointer}
+.backButton:hover{color:var(--text)}
+.envelopePageHead{display:flex;justify-content:space-between;align-items:end;gap:18px;margin-bottom:18px}
+.envelopePageHead h2{margin:0;font-size:34px;letter-spacing:-.04em}
+.envelopeTotal{font-size:28px;color:var(--accent)}
+.emptyEnvelope{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:16px;padding:14px;text-align:left}
+.emptyEnvelope>span:first-child{width:34px;height:34px;border-radius:10px;background:var(--soft);display:grid;place-items:center}
+.emptyEnvelope b,.emptyEnvelope small{display:block}
+.emptyEnvelope small{margin-top:3px}
