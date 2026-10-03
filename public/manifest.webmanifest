@@ -1,0 +1,9 @@
+{
+  "name": "Goals Game",
+  "short_name": "Goals",
+  "description": "Win the week together.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0d12",
+  "theme_color": "#101218"
+}
