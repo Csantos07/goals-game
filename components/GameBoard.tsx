@@ -88,6 +88,7 @@ export default function GameBoard() {
   const [showTheme, setShowTheme] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
+  const [vacationBalance, setVacationBalance] = useState(350);
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
 
   useEffect(() => {
@@ -99,12 +100,14 @@ export default function GameBoard() {
           active?: Player;
           themeMode?: ThemeMode;
           accent?: string;
+          vacationBalance?: number;
         };
 
         if (Array.isArray(parsed.goals)) setGoals(parsed.goals);
         if (parsed.active === "Carlo" || parsed.active === "Lindsey") setActive(parsed.active);
         if (parsed.themeMode === "dark" || parsed.themeMode === "light") setThemeMode(parsed.themeMode);
         if (typeof parsed.accent === "string") setAccent(parsed.accent);
+        if (typeof parsed.vacationBalance === "number") setVacationBalance(parsed.vacationBalance);
       }
     } catch (error) {
       console.warn("Could not load saved Goals Game data.", error);
@@ -119,12 +122,12 @@ export default function GameBoard() {
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ goals, active, themeMode, accent })
+        JSON.stringify({ goals, active, themeMode, accent, vacationBalance })
       );
     } catch (error) {
       console.warn("Could not save Goals Game data.", error);
     }
-  }, [goals, active, themeMode, accent, hasLoadedSavedState]);
+  }, [goals, active, themeMode, accent, vacationBalance, hasLoadedSavedState]);
 
   const today = getCurrentDayKey();
   const weekLabel = getWeekLabel();
@@ -277,6 +280,18 @@ export default function GameBoard() {
           <Score name="Carlo" score={scores.Carlo} max={maxPoints("Carlo")} active={active === "Carlo"} onClick={() => setActive("Carlo")} />
           <div className="versus"><b>VS</b><span>{leader}</span></div>
           <Score name="Lindsey" score={scores.Lindsey} max={maxPoints("Lindsey")} active={active === "Lindsey"} onClick={() => setActive("Lindsey")} />
+        </section>
+
+        <section className="winningsCard">
+          <div>
+            <p className="eyebrow">WINNINGS</p>
+            <h2>Vacation Envelope</h2>
+            <p className="potCopy">For now, weekly winnings flow straight into this envelope.</p>
+          </div>
+          <div className="potBalance">
+            <small>Current balance</small>
+            <strong>${vacationBalance.toLocaleString()}</strong>
+          </div>
         </section>
 
         <section className="card">
