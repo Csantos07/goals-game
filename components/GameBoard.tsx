@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 type Player = "Carlo" | "Lindsey";
 type AssignedBy = "self" | "partner";
 type GoalType = "oneTime" | "daily";
 type DayKey = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+type ThemeMode = "dark" | "light";
 
 type Goal = {
   id: number;
@@ -20,16 +21,17 @@ type Goal = {
 const DAYS: DayKey[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const ONE_TIME_POINTS = 50;
 const DAILY_POINTS = 10;
+const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
 
 const initialGoals: Goal[] = [
-  { id: 1, player: "Carlo", title: "Finish project milestone", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
-  { id: 2, player: "Carlo", title: "3 rehab sessions", assignedBy: "self", type: "daily", done: false, dailyDone: ["Mon", "Wed"] },
-  { id: 3, player: "Carlo", title: "Plan our date night", assignedBy: "partner", type: "oneTime", done: true, dailyDone: [] },
-  { id: 4, player: "Carlo", title: "No phone during dinner", assignedBy: "partner", type: "daily", done: false, dailyDone: ["Mon", "Tue"] },
-  { id: 5, player: "Lindsey", title: "Finish personal project", assignedBy: "self", type: "oneTime", done: true, dailyDone: [] },
-  { id: 6, player: "Lindsey", title: "Workout", assignedBy: "self", type: "daily", done: false, dailyDone: ["Mon", "Tue", "Thu"] },
-  { id: 7, player: "Lindsey", title: "Pick a family activity", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
-  { id: 8, player: "Lindsey", title: "Read 30 minutes", assignedBy: "partner", type: "daily", done: false, dailyDone: ["Wed"] }
+  { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
+  { id: 2, player: "Carlo", title: "Wake up at 6:15", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
+  { id: 3, player: "Carlo", title: "Monday working in the office", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
+  { id: 4, player: "Carlo", title: "Close-out routine at work", assignedBy: "partner", type: "daily", done: false, dailyDone: [] },
+  { id: 5, player: "Lindsey", title: "Call Advent", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
+  { id: 6, player: "Lindsey", title: "Nurse once and pump four times", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
+  { id: 7, player: "Lindsey", title: "Monday morning gym", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
+  { id: 8, player: "Lindsey", title: "Pick dinner every night + night routine", assignedBy: "partner", type: "daily", done: false, dailyDone: [] }
 ];
 
 function getCurrentDayKey(): DayKey {
@@ -41,14 +43,11 @@ function getWeekLabel() {
   const now = new Date();
   const jsDay = now.getDay();
   const diffToMonday = jsDay === 0 ? -6 : 1 - jsDay;
-
   const monday = new Date(now);
   monday.setHours(12, 0, 0, 0);
   monday.setDate(now.getDate() + diffToMonday);
-
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-
   const month = new Intl.DateTimeFormat("en-US", { month: "short" });
   const sameMonth = monday.getMonth() === sunday.getMonth();
 
@@ -67,16 +66,35 @@ function possiblePoints(goal: Goal) {
   return goal.type === "oneTime" ? ONE_TIME_POINTS : DAYS.length * DAILY_POINTS;
 }
 
+function contrastText(hex: string) {
+  const clean = hex.replace("#", "");
+  if (clean.length !== 6) return "#10120c";
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? "#10120c" : "#ffffff";
+}
+
 export default function GameBoard() {
   const [goals, setGoals] = useState(initialGoals);
   const [active, setActive] = useState<Player>("Carlo");
-  const [showAdd, setShowAdd] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [assignedBy, setAssignedBy] = useState<AssignedBy>("self");
   const [goalType, setGoalType] = useState<GoalType>("oneTime");
+  const [showTheme, setShowTheme] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
+  const [accent, setAccent] = useState("#c9ff54");
 
   const today = getCurrentDayKey();
   const weekLabel = getWeekLabel();
+  const accentContrast = contrastText(accent);
+  const themeStyle = {
+    "--accent": accent,
+    "--accent-contrast": accentContrast
+  } as CSSProperties;
 
   const scores = useMemo(() => ({
     Carlo: goals.filter(g => g.player === "Carlo").reduce((sum, goal) => sum + earnedPoints(goal), 0),
@@ -101,26 +119,64 @@ export default function GameBoard() {
     }));
   }
 
-  function addGoal() {
+  function openAdd(assigned: AssignedBy = "self") {
+    setEditingGoalId(null);
+    setTitle("");
+    setAssignedBy(assigned);
+    setGoalType("oneTime");
+    setShowGoalModal(true);
+  }
+
+  function openEdit(goal: Goal) {
+    setEditingGoalId(goal.id);
+    setTitle(goal.title);
+    setAssignedBy(goal.assignedBy);
+    setGoalType(goal.type);
+    setShowGoalModal(true);
+  }
+
+  function saveGoal() {
     if (!title.trim()) return;
 
-    setGoals(gs => [...gs, {
-      id: Date.now(),
-      player: active,
-      title: title.trim(),
-      assignedBy,
-      type: goalType,
-      done: false,
-      dailyDone: []
-    }]);
+    if (editingGoalId !== null) {
+      setGoals(gs => gs.map(goal => {
+        if (goal.id !== editingGoalId) return goal;
+        const changedType = goal.type !== goalType;
+        return {
+          ...goal,
+          title: title.trim(),
+          assignedBy,
+          type: goalType,
+          done: changedType ? false : goal.done,
+          dailyDone: changedType ? [] : goal.dailyDone
+        };
+      }));
+    } else {
+      setGoals(gs => [...gs, {
+        id: Date.now(),
+        player: active,
+        title: title.trim(),
+        assignedBy,
+        type: goalType,
+        done: false,
+        dailyDone: []
+      }]);
+    }
 
+    setShowGoalModal(false);
+    setEditingGoalId(null);
     setTitle("");
-    setAssignedBy("self");
-    setGoalType("oneTime");
-    setShowAdd(false);
+  }
+
+  function deleteGoal(goal: Goal) {
+    if (!window.confirm(`Delete "${goal.title}"?`)) return;
+    setGoals(gs => gs.filter(g => g.id !== goal.id));
   }
 
   const activeGoals = goals.filter(g => g.player === active);
+  const selfGoals = activeGoals.filter(g => g.assignedBy === "self");
+  const partnerGoals = activeGoals.filter(g => g.assignedBy === "partner");
+
   const leader = scores.Carlo === scores.Lindsey
     ? "Tie game"
     : scores.Carlo > scores.Lindsey
@@ -132,127 +188,228 @@ export default function GameBoard() {
   const progress = activePossible ? activeEarned / activePossible * 100 : 0;
 
   return (
-    <main className="shell">
-      <header className="top">
-        <div>
-          <p className="eyebrow">GOALS GAME</p>
-          <h1>Win the week <span>together.</span></h1>
-          <p className="sub">{weekLabel} · Today is {today}</p>
-        </div>
-        <div className="streak">🔥 <b>1</b><small>week streak</small></div>
-      </header>
-
-      <section className="scoreboard">
-        <Score name="Carlo" score={scores.Carlo} max={maxPoints("Carlo")} active={active === "Carlo"} onClick={() => setActive("Carlo")} />
-        <div className="versus"><b>VS</b><span>{leader}</span></div>
-        <Score name="Lindsey" score={scores.Lindsey} max={maxPoints("Lindsey")} active={active === "Lindsey"} onClick={() => setActive("Lindsey")} />
-      </section>
-
-      <section className="card">
-        <div className="sectionHead">
+    <div className="appFrame" data-theme={themeMode} style={themeStyle}>
+      <main className="shell">
+        <header className="top">
           <div>
-            <p className="eyebrow">{active.toUpperCase()}'S GOALS</p>
-            <h2>Make your moves.</h2>
+            <p className="eyebrow">GOALS GAME</p>
+            <h1>Win the week <span>together.</span></h1>
+            <p className="sub">{weekLabel} · Today is {today}</p>
           </div>
-          <button className="add" onClick={() => setShowAdd(true)}>＋ Add goal</button>
-        </div>
 
-        <div className="goals">
-          {activeGoals.map(goal => (
-            <article key={goal.id} className={`goalCard ${goal.type === "oneTime" && goal.done ? "done" : ""}`}>
-              <div className="goalTop">
-                {goal.type === "oneTime" ? (
-                  <button className="check" aria-label={`Toggle ${goal.title}`} onClick={() => toggleOneTime(goal.id)}>
-                    {goal.done ? "✓" : ""}
-                  </button>
-                ) : (
-                  <span className="repeatMark">↻</span>
-                )}
+          <div className="topActions">
+            <button className="themeButton" onClick={() => setShowTheme(v => !v)} aria-expanded={showTheme}>
+              ◐ Theme
+            </button>
+            <div className="streak">🔥 <b>1</b><small>week streak</small></div>
+          </div>
+        </header>
 
-                <div className="goalText">
-                  <b>{goal.title}</b>
-                  <small>
-                    {goal.assignedBy === "self" ? "My goal" : "Partner challenge"} · {goal.type === "oneTime" ? "One-time" : "Daily"}
-                  </small>
-                </div>
+        {showTheme && (
+          <section className="themePanel">
+            <div>
+              <p className="eyebrow">THEME</p>
+              <b>Make the game yours.</b>
+            </div>
 
-                <span className="pts">
-                  {goal.type === "oneTime"
-                    ? `+${ONE_TIME_POINTS}`
-                    : `${earnedPoints(goal)}/${possiblePoints(goal)}`}
-                </span>
+            <div className="modeSwitch">
+              <button className={themeMode === "dark" ? "selected" : ""} onClick={() => setThemeMode("dark")}>Dark</button>
+              <button className={themeMode === "light" ? "selected" : ""} onClick={() => setThemeMode("light")}>Light</button>
+            </div>
+
+            <div className="swatches">
+              {ACCENTS.map(color => (
+                <button
+                  key={color}
+                  className={`swatch ${accent.toLowerCase() === color.toLowerCase() ? "selected" : ""}`}
+                  style={{ background: color }}
+                  onClick={() => setAccent(color)}
+                  aria-label={`Use ${color} accent`}
+                />
+              ))}
+              <label className="customColor">
+                <input type="color" value={accent} onChange={e => setAccent(e.target.value)} />
+                <span>Custom</span>
+              </label>
+            </div>
+          </section>
+        )}
+
+        <section className="scoreboard">
+          <Score name="Carlo" score={scores.Carlo} max={maxPoints("Carlo")} active={active === "Carlo"} onClick={() => setActive("Carlo")} />
+          <div className="versus"><b>VS</b><span>{leader}</span></div>
+          <Score name="Lindsey" score={scores.Lindsey} max={maxPoints("Lindsey")} active={active === "Lindsey"} onClick={() => setActive("Lindsey")} />
+        </section>
+
+        <section className="card">
+          <div className="sectionHead">
+            <div>
+              <p className="eyebrow">{active.toUpperCase()}'S WEEK</p>
+              <h2>Make your moves.</h2>
+            </div>
+            <button className="add" onClick={() => openAdd("self")}>＋ Add goal</button>
+          </div>
+
+          <GoalSection
+            title="My Goals"
+            subtitle="Goals you chose for yourself"
+            goals={selfGoals}
+            today={today}
+            onToggleOneTime={toggleOneTime}
+            onToggleDaily={toggleDaily}
+            onEdit={openEdit}
+            onDelete={deleteGoal}
+            onAdd={() => openAdd("self")}
+          />
+
+          <GoalSection
+            title="Partner Challenges"
+            subtitle="Goals your partner set for you"
+            goals={partnerGoals}
+            today={today}
+            onToggleOneTime={toggleOneTime}
+            onToggleDaily={toggleDaily}
+            onEdit={openEdit}
+            onDelete={deleteGoal}
+            onAdd={() => openAdd("partner")}
+          />
+        </section>
+
+        <section className="progressCard">
+          <div>
+            <p className="eyebrow">WEEKLY PROGRESS</p>
+            <b>{activeEarned} of {activePossible} possible points</b>
+          </div>
+          <div className="bar"><span style={{ width: `${progress}%` }} /></div>
+          <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
+        </section>
+
+        <button className="closeWeek" onClick={() => alert(`Current score — Carlo ${scores.Carlo}, Lindsey ${scores.Lindsey}. Keep playing through Sunday!`)}>
+          🏁 Preview week result
+        </button>
+
+        {showGoalModal && (
+          <div className="modalBack" onClick={() => setShowGoalModal(false)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <p className="eyebrow">{editingGoalId !== null ? "EDIT GOAL" : "NEW GOAL"} · {active.toUpperCase()}</p>
+              <h2>{editingGoalId !== null ? "Change the play." : "Add something worth chasing."}</h2>
+
+              <label>
+                Goal
+                <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Read before bed" />
+              </label>
+
+              <p className="choiceLabel">Who set it?</p>
+              <div className="seg">
+                <button className={assignedBy === "self" ? "selected" : ""} onClick={() => setAssignedBy("self")}>My goal</button>
+                <button className={assignedBy === "partner" ? "selected" : ""} onClick={() => setAssignedBy("partner")}>Partner challenge</button>
               </div>
 
-              {goal.type === "daily" && (
-                <div className="dayRow" aria-label={`${goal.title} daily completion`}>
-                  {DAYS.map(day => {
-                    const completed = goal.dailyDone.includes(day);
-                    return (
-                      <button
-                        key={day}
-                        className={`day ${completed ? "complete" : ""} ${today === day ? "today" : ""}`}
-                        onClick={() => toggleDaily(goal.id, day)}
-                        aria-pressed={completed}
-                      >
-                        <span>{day}</span>
-                        <b>{completed ? "✓" : DAILY_POINTS}</b>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
+              <p className="choiceLabel">How does it score?</p>
+              <div className="seg">
+                <button className={goalType === "oneTime" ? "selected" : ""} onClick={() => setGoalType("oneTime")}>One-time · 50 pts</button>
+                <button className={goalType === "daily" ? "selected" : ""} onClick={() => setGoalType("daily")}>Daily · 10/day</button>
+              </div>
 
-      <section className="progressCard">
-        <div>
-          <p className="eyebrow">WEEKLY PROGRESS</p>
-          <b>{activeEarned} of {activePossible} possible points</b>
-        </div>
-        <div className="bar"><span style={{ width: `${progress}%` }} /></div>
-        <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
-      </section>
+              <p className="scoreHint">
+                {goalType === "oneTime"
+                  ? "Complete it once during the week for 50 points."
+                  : "Check off each day you complete it. Seven days = 70 possible points."}
+              </p>
 
-      <button className="closeWeek" onClick={() => alert(`Current score — Carlo ${scores.Carlo}, Lindsey ${scores.Lindsey}. Keep playing through Sunday!`)}>
-        🏁 Preview week result
-      </button>
-
-      {showAdd && (
-        <div className="modalBack" onClick={() => setShowAdd(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <p className="eyebrow">NEW GOAL · {active.toUpperCase()}</p>
-            <h2>Add something worth chasing.</h2>
-
-            <label>
-              Goal
-              <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Read before bed" />
-            </label>
-
-            <p className="choiceLabel">Who set it?</p>
-            <div className="seg">
-              <button className={assignedBy === "self" ? "selected" : ""} onClick={() => setAssignedBy("self")}>My goal</button>
-              <button className={assignedBy === "partner" ? "selected" : ""} onClick={() => setAssignedBy("partner")}>Partner challenge</button>
+              <button className="primary" onClick={saveGoal}>{editingGoalId !== null ? "Save changes" : "Add to the week"}</button>
             </div>
-
-            <p className="choiceLabel">How does it score?</p>
-            <div className="seg">
-              <button className={goalType === "oneTime" ? "selected" : ""} onClick={() => setGoalType("oneTime")}>One-time · 50 pts</button>
-              <button className={goalType === "daily" ? "selected" : ""} onClick={() => setGoalType("daily")}>Daily · 10/day</button>
-            </div>
-
-            <p className="scoreHint">
-              {goalType === "oneTime"
-                ? "Complete it once during the week for 50 points."
-                : "Check off each day you complete it. Seven days = 70 possible points."}
-            </p>
-
-            <button className="primary" onClick={addGoal}>Add to the week</button>
           </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function GoalSection({
+  title,
+  subtitle,
+  goals,
+  today,
+  onToggleOneTime,
+  onToggleDaily,
+  onEdit,
+  onDelete,
+  onAdd
+}: {
+  title: string;
+  subtitle: string;
+  goals: Goal[];
+  today: DayKey;
+  onToggleOneTime: (id: number) => void;
+  onToggleDaily: (id: number, day: DayKey) => void;
+  onEdit: (goal: Goal) => void;
+  onDelete: (goal: Goal) => void;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="goalSection">
+      <div className="goalSectionHead">
+        <div>
+          <h3>{title}</h3>
+          <p>{subtitle}</p>
         </div>
-      )}
-    </main>
+        <button className="miniAdd" onClick={onAdd}>＋</button>
+      </div>
+
+      <div className="goals">
+        {goals.length === 0 ? (
+          <button className="emptyGoals" onClick={onAdd}>＋ Add a goal here</button>
+        ) : goals.map(goal => (
+          <article key={goal.id} className={`goalCard ${goal.type === "oneTime" && goal.done ? "done" : ""}`}>
+            <div className="goalTop">
+              {goal.type === "oneTime" ? (
+                <button className="check" aria-label={`Toggle ${goal.title}`} onClick={() => onToggleOneTime(goal.id)}>
+                  {goal.done ? "✓" : ""}
+                </button>
+              ) : (
+                <span className="repeatMark">↻</span>
+              )}
+
+              <div className="goalText">
+                <b>{goal.title}</b>
+                <small>{goal.type === "oneTime" ? "One-time · 50 pts" : "Daily · 10/day"}</small>
+              </div>
+
+              <span className="pts">
+                {goal.type === "oneTime"
+                  ? `+${ONE_TIME_POINTS}`
+                  : `${earnedPoints(goal)}/${possiblePoints(goal)}`}
+              </span>
+
+              <div className="goalActions">
+                <button onClick={() => onEdit(goal)} aria-label={`Edit ${goal.title}`} title="Edit">✎</button>
+                <button onClick={() => onDelete(goal)} aria-label={`Delete ${goal.title}`} title="Delete">⌫</button>
+              </div>
+            </div>
+
+            {goal.type === "daily" && (
+              <div className="dayRow" aria-label={`${goal.title} daily completion`}>
+                {DAYS.map(day => {
+                  const completed = goal.dailyDone.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      className={`day ${completed ? "complete" : ""} ${today === day ? "today" : ""}`}
+                      onClick={() => onToggleDaily(goal.id, day)}
+                      aria-pressed={completed}
+                    >
+                      <span>{day}</span>
+                      <b>{completed ? "✓" : DAILY_POINTS}</b>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </div>
   );
 }
 
