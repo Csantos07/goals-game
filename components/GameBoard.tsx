@@ -240,16 +240,14 @@ export default function GameBoard() {
             <p className="sub">{weekLabel} · Today is {today}</p>
           </div>
 
-          <div className="topActions">
-            <button
-              className="menuButton"
-              onClick={() => setShowMenu(v => !v)}
-              aria-expanded={showMenu}
-              aria-label="Open navigation"
-            >
-              ☰
-            </button>
-          </div>
+          <button
+            className="menuButton menuOverlay"
+            onClick={() => setShowMenu(v => !v)}
+            aria-expanded={showMenu}
+            aria-label="Open navigation"
+          >
+            ☰
+          </button>
         </header>
 
         {showMenu && (
