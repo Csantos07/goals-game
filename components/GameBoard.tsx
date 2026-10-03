@@ -86,6 +86,7 @@ export default function GameBoard() {
   const [assignedBy, setAssignedBy] = useState<AssignedBy>("self");
   const [goalType, setGoalType] = useState<GoalType>("oneTime");
   const [showMenu, setShowMenu] = useState(false);
+  const [menuButtonVisible, setMenuButtonVisible] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showEnvelopes, setShowEnvelopes] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
@@ -130,6 +131,23 @@ export default function GameBoard() {
       console.warn("Could not save Goals Game data.", error);
     }
   }, [goals, active, themeMode, accent, vacationBalance, hasLoadedSavedState]);
+
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+
+    const onScroll = () => {
+      const nextY = window.scrollY;
+      const nearTop = nextY < 40;
+      const scrollingUp = nextY < lastY;
+
+      setMenuButtonVisible(nearTop || scrollingUp || showMenu);
+      lastY = nextY;
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [showMenu]);
 
   const today = getCurrentDayKey();
   const weekLabel = getWeekLabel();
@@ -233,66 +251,55 @@ export default function GameBoard() {
   return (
     <div className="appFrame" data-theme={themeMode} style={themeStyle}>
       <main className="shell">
+        <button
+          className={`menuButton menuOverlay ${menuButtonVisible ? "visible" : "hidden"} ${showMenu ? "open" : ""}`}
+          onClick={() => setShowMenu(v => !v)}
+          aria-expanded={showMenu}
+          aria-label={showMenu ? "Close navigation" : "Open navigation"}
+        >
+          <span>{showMenu ? "×" : "☰"}</span>
+        </button>
+
         <header className="top">
           <div>
             <p className="eyebrow">GOALS GAME</p>
             <h1>Win the week <span>together.</span></h1>
             <p className="sub">{weekLabel} · Today is {today}</p>
           </div>
-
-          <button
-            className="menuButton menuOverlay"
-            onClick={() => setShowMenu(v => !v)}
-            aria-expanded={showMenu}
-            aria-label="Open navigation"
-          >
-            ☰
-          </button>
         </header>
 
-        {showMenu && (
-          <section className="navMenu">
-            <button className="navItem activeNav" onClick={() => setShowMenu(false)}>
-              <span>Game</span><small>Current week</small>
-            </button>
-            <button className="navItem" onClick={() => { setShowEnvelopes(true); setShowMenu(false); }}>
-              <span>Envelopes</span><small>Vacation · ${vacationBalance.toLocaleString()}</small>
-            </button>
-            <button className="navItem" onClick={() => setShowSettings(v => !v)} aria-expanded={showSettings}>
-              <span>Settings</span><small>Theme & appearance</small>
-            </button>
+        <aside className={`fullScreenMenu ${showMenu ? "open" : ""}`} aria-hidden={!showMenu}>
+          <nav className="fullScreenNav" aria-label="Primary navigation">
+            <button onClick={() => setShowMenu(false)}>Game</button>
+            <button onClick={() => { setShowEnvelopes(true); setShowMenu(false); }}>Envelopes</button>
+            <button onClick={() => setShowSettings(v => !v)} aria-expanded={showSettings}>Settings</button>
+          </nav>
 
-            {showSettings && (
-              <div className="settingsPanel">
-                <div>
-                  <p className="eyebrow">THEME</p>
-                  <b>Appearance</b>
-                </div>
-
-                <div className="modeSwitch">
-                  <button className={themeMode === "dark" ? "selected" : ""} onClick={() => setThemeMode("dark")}>Dark</button>
-                  <button className={themeMode === "light" ? "selected" : ""} onClick={() => setThemeMode("light")}>Light</button>
-                </div>
-
-                <div className="swatches">
-                  {ACCENTS.map(color => (
-                    <button
-                      key={color}
-                      className={`swatch ${accent.toLowerCase() === color.toLowerCase() ? "selected" : ""}`}
-                      style={{ background: color }}
-                      onClick={() => setAccent(color)}
-                      aria-label={`Use ${color} accent`}
-                    />
-                  ))}
-                  <label className="customColor">
-                    <input type="color" value={accent} onChange={e => setAccent(e.target.value)} />
-                    <span>Custom</span>
-                  </label>
-                </div>
+          {showSettings && (
+            <div className="fullScreenSettings">
+              <div className="modeSwitch wordSwitch">
+                <button className={themeMode === "dark" ? "selected" : ""} onClick={() => setThemeMode("dark")}>Dark</button>
+                <button className={themeMode === "light" ? "selected" : ""} onClick={() => setThemeMode("light")}>Light</button>
               </div>
-            )}
-          </section>
-        )}
+
+              <div className="swatches">
+                {ACCENTS.map(color => (
+                  <button
+                    key={color}
+                    className={`swatch ${accent.toLowerCase() === color.toLowerCase() ? "selected" : ""}`}
+                    style={{ background: color }}
+                    onClick={() => setAccent(color)}
+                    aria-label={`Use ${color} accent`}
+                  />
+                ))}
+                <label className="customColor">
+                  <input type="color" value={accent} onChange={e => setAccent(e.target.value)} />
+                  <span>Custom</span>
+                </label>
+              </div>
+            </div>
+          )}
+        </aside>
 
         <section className="scoreboard">
           <Score name="Carlo" score={scores.Carlo} max={maxPoints("Carlo")} active={active === "Carlo"} onClick={() => setActive("Carlo")} />
@@ -300,17 +307,15 @@ export default function GameBoard() {
           <Score name="Lindsey" score={scores.Lindsey} max={maxPoints("Lindsey")} active={active === "Lindsey"} onClick={() => setActive("Lindsey")} />
         </section>
 
-        <section className="winningsCard">
-          <div>
-            <p className="eyebrow">WINNINGS</p>
-            <h2>Vacation Envelope</h2>
-            <p className="potCopy">For now, weekly winnings flow straight into this envelope.</p>
-          </div>
-          <div className="potBalance">
-            <small>Current balance</small>
-            <strong>${vacationBalance.toLocaleString()}</strong>
-          </div>
-        </section>
+        <button className="vacationTile" onClick={() => setShowEnvelopes(true)}>
+          <span className="vacationTileIcon">✉</span>
+          <span className="vacationTileText">
+            <small>ENVELOPE</small>
+            <b>Vacation</b>
+          </span>
+          <strong>${vacationBalance.toLocaleString()}</strong>
+          <span className="vacationTileArrow">›</span>
+        </button>
 
         <section className="card">
           <div className="sectionHead">
@@ -360,14 +365,16 @@ export default function GameBoard() {
         </button>
 
         {showEnvelopes && (
-          <div className="modalBack" onClick={() => setShowEnvelopes(false)}>
-            <div className="modal envelopeModal" onClick={e => e.stopPropagation()}>
-              <div className="modalHead">
+          <section className="envelopePage">
+            <div className="envelopePageInner">
+              <button className="backButton" onClick={() => setShowEnvelopes(false)}>← Back</button>
+
+              <div className="envelopePageHead">
                 <div>
                   <p className="eyebrow">ENVELOPES</p>
                   <h2>Your winnings.</h2>
                 </div>
-                <button className="modalClose" onClick={() => setShowEnvelopes(false)} aria-label="Close envelopes">×</button>
+                <strong className="envelopeTotal">${vacationBalance.toLocaleString()}</strong>
               </div>
 
               <button className="envelopeRow">
@@ -376,9 +383,12 @@ export default function GameBoard() {
                 <strong>${vacationBalance.toLocaleString()}</strong>
               </button>
 
-              <p className="envelopeHint">Future envelopes can live here when you decide to open them.</p>
+              <div className="emptyEnvelope">
+                <span>＋</span>
+                <span><b>New envelope</b><small>Available when you decide to open one</small></span>
+              </div>
             </div>
-          </div>
+          </section>
         )}
 
         {showGoalModal && (
