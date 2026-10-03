@@ -34,7 +34,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .score em{display:inline;font-size:11px}
 .versus{display:flex;flex-direction:column;justify-content:center;text-align:center;color:var(--muted);font-size:10px}
 .versus b{color:var(--text);font-size:12px}
-.card,.progressCard{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;margin-top:14px}
+.card,.progressCard,.winningsCard{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;margin-top:14px}
+.winningsCard{display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(135deg,var(--card),var(--card2))}
+.winningsCard h2{margin:0;font-size:22px;letter-spacing:-.03em}
+.potCopy{margin:7px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
+.potBalance{min-width:132px;border:1px solid var(--line);background:var(--soft);border-radius:18px;padding:13px 15px;text-align:right}
+.potBalance small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.potBalance strong{display:block;color:var(--accent);font-size:30px;line-height:1.05;margin-top:5px}
 .sectionHead{display:flex;justify-content:space-between;gap:12px;align-items:center}
 .sectionHead h2,.modal h2{margin:0;font-size:22px;letter-spacing:-.03em}
 .add{background:var(--button);border:1px solid var(--buttonLine);color:var(--text);border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer}
@@ -92,6 +98,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   .score strong{font-size:25px}
   .score em{display:block}
   .sectionHead{align-items:flex-end}
+  .winningsCard{align-items:flex-start}
+  .potBalance{min-width:112px;padding:11px 12px}
+  .potBalance strong{font-size:25px}
   .goalTop{align-items:flex-start}
   .pts{font-size:14px}
   .goalActions{flex-direction:column}
