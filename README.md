@@ -5,15 +5,16 @@ A mobile-first prototype of the couples goal game: set weekly goals, attach poin
 ## What works right now
 - Mobile game-board UI
 - Carlo/Lindsey player switching
-- Goal completion toggles
-- Automatic point totals
-- Add-goal sheet with point values
-- Self goal vs partner challenge
-- Weekly progress
+- One-time and daily goal scoring
+- Separate My Goals and Partner Challenges
+- Edit and delete goal controls
+- Automatic point totals and weekly progress
+- Dark/light theme toggle and custom accent colors
+- Browser localStorage persistence for goals, checkoffs, active player, and theme
 - PWA manifest
 - Supabase-ready schema + RLS policies
 
-The first build intentionally uses local React state so you can judge the game feel before wiring persistence/auth.
+The current prototype saves locally in the browser so the game can be tested before wiring shared persistence/auth with Supabase.
 
 ## Run it
 ```bash
@@ -26,7 +27,7 @@ Open http://localhost:3000.
 1. Create a Supabase project.
 2. Run `supabase/schema.sql` in its SQL editor.
 3. Add Supabase Auth and `@supabase/ssr`.
-4. Replace the prototype state with queries/mutations against `weeks` and `goals`.
+4. Replace browser-local state with queries/mutations against `weeks` and `goals`.
 5. Add couple invitation/onboarding.
 6. Deploy to Vercel.
 
