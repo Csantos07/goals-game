@@ -24,17 +24,16 @@ const DAILY_POINTS = 10;
 const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
 const STORAGE_KEY = "goals-game:v1";
 const SUNDAY_CELEBRATION_KEY = "goals-game:last-sunday-celebration";
-const TEST_SUNDAY_PREVIEW_KEY = "goals-game:test-sunday-next-load";
 
 const initialGoals: Goal[] = [
   { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
-  { id: 2, player: "Carlo", title: "Wake up at 6:15", assignedBy: "self", type: "daily", done: false, dailyDone: ["Tue", "Wed"] },
+  { id: 2, player: "Carlo", title: "Wake up at 6:15", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
   { id: 3, player: "Carlo", title: "Monday working in the office", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
-  { id: 4, player: "Carlo", title: "Do something for Nico before work", assignedBy: "partner", type: "daily", done: false, dailyDone: ["Mon", "Tue", "Thu", "Fri"] },
+  { id: 4, player: "Carlo", title: "Do something for Nico before work", assignedBy: "partner", type: "daily", done: false, dailyDone: [] },
   { id: 5, player: "Lindsey", title: "Call Advent", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
-  { id: 6, player: "Lindsey", title: "Nurse once and pump four times", assignedBy: "self", type: "daily", done: false, dailyDone: ["Tue", "Thu"] },
-  { id: 7, player: "Lindsey", title: "Monday morning gym", assignedBy: "partner", type: "oneTime", done: true, dailyDone: [] },
-  { id: 8, player: "Lindsey", title: "Pick dinner every night + night routine", assignedBy: "partner", type: "daily", done: false, dailyDone: ["Wed", "Fri", "Sat"] }
+  { id: 6, player: "Lindsey", title: "Nurse once and pump four times", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
+  { id: 7, player: "Lindsey", title: "Monday morning gym", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
+  { id: 8, player: "Lindsey", title: "Pick dinner every night + night routine", assignedBy: "partner", type: "daily", done: false, dailyDone: [] }
 ];
 
 function getCurrentDayKey(): DayKey {
@@ -95,7 +94,7 @@ function contrastText(hex: string) {
 
 export default function GameBoard() {
   const [goals, setGoals] = useState(initialGoals);
-  const [active, setActive] = useState<Player>("Lindsey");
+  const [active, setActive] = useState<Player>("Carlo");
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
@@ -178,19 +177,9 @@ export default function GameBoard() {
   const weekKey = getWeekKey();
 
   useEffect(() => {
-    if (!hasLoadedSavedState) return;
+    if (!hasLoadedSavedState || !isSunday) return;
 
     try {
-      const forceSundayTest = window.localStorage.getItem(TEST_SUNDAY_PREVIEW_KEY) === "1";
-
-      if (forceSundayTest) {
-        setShowWeekResult(true);
-        window.localStorage.removeItem(TEST_SUNDAY_PREVIEW_KEY);
-        return;
-      }
-
-      if (!isSunday) return;
-
       const lastCelebratedWeek = window.localStorage.getItem(SUNDAY_CELEBRATION_KEY);
       if (lastCelebratedWeek !== weekKey) {
         setShowWeekResult(true);
@@ -198,7 +187,7 @@ export default function GameBoard() {
       }
     } catch (error) {
       console.warn("Could not track Sunday celebration state.", error);
-      if (isSunday) setShowWeekResult(true);
+      setShowWeekResult(true);
     }
   }, [hasLoadedSavedState, isSunday, weekKey]);
   const accentContrast = contrastText(accent);
@@ -284,32 +273,6 @@ export default function GameBoard() {
     setGoals(gs => gs.filter(g => g.id !== goal.id));
   }
 
-  function resetToTestSeed() {
-    const seededGoals = initialGoals.map(goal => ({ ...goal, dailyDone: [...goal.dailyDone] }));
-    setGoals(seededGoals);
-    setActive("Lindsey");
-    setShowWeekResult(false);
-    setShowEnvelopes(false);
-    setShowMenu(false);
-
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          goals: seededGoals,
-          active: "Lindsey",
-          themeMode,
-          accent,
-          vacationBalance
-        })
-      );
-      window.localStorage.removeItem(SUNDAY_CELEBRATION_KEY);
-      window.localStorage.setItem(TEST_SUNDAY_PREVIEW_KEY, "1");
-    } catch (error) {
-      console.warn("Could not reset Goals Game test seed.", error);
-    }
-  }
-
   const activeGoals = goals.filter(g => g.player === active);
   const selfGoals = activeGoals.filter(g => g.assignedBy === "self");
   const partnerGoals = activeGoals.filter(g => g.assignedBy === "partner");
@@ -355,11 +318,6 @@ export default function GameBoard() {
             <button onClick={() => { setShowEnvelopes(true); setShowMenu(false); }}>Envelopes</button>
             <button onClick={() => setShowSettings(v => !v)} aria-expanded={showSettings}>Settings</button>
           </nav>
-
-          <div className="fullScreenMenuUtility">
-            <span>TESTING</span>
-            <button onClick={resetToTestSeed}>↺ Reset + arm Sunday test</button>
-          </div>
 
           {showSettings && (
             <div className="fullScreenSettings">
@@ -415,7 +373,7 @@ export default function GameBoard() {
                 <span><b>Lindsey</b><strong>{scores.Lindsey}</strong></span>
               </div>
               <button className="weekResultContinue" onClick={() => setShowWeekResult(false)}>
-                {isSunday ? "View final board" : "Back to the game"}
+                View final board
               </button>
             </div>
           </section>
@@ -480,9 +438,11 @@ export default function GameBoard() {
           <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
         </section>
 
-        <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
-          🏁 {isSunday ? "View final result" : "Preview Sunday closeout"}
-        </button>
+        {isSunday && (
+          <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
+            🏁 View final result
+          </button>
+        )}
 
         {showEnvelopes && (
           <section className="envelopePage">
