@@ -504,4 +504,3 @@ alter publication supabase_realtime add table public.goals;
 alter publication supabase_realtime add table public.goal_completions;
 alter publication supabase_realtime add table public.envelopes;
 alter publication supabase_realtime add table public.user_preferences;
-alter publication supabase_realtime add table public.user_backgrounds;
