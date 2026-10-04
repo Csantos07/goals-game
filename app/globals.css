@@ -154,59 +154,133 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 }
 
 
-.weekClosedBanner{
-  position:relative;
-  overflow:hidden;
-  border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line));
-  background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 18%,var(--card)),var(--card));
-  border-radius:26px;
-  padding:26px 22px;
-  margin:2px 0 18px;
-  box-shadow:0 18px 50px rgba(0,0,0,.14)
+.fullScreenMenuUtility{
+  width:min(720px,100%);
+  margin:-108px auto 0;
+  padding:0 24px 44px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  color:rgba(255,255,255,.78)
 }
-.weekClosedBanner .eyebrow{margin-bottom:9px}
-.weekClosedBanner h2{position:relative;z-index:2;margin:0;font-size:clamp(30px,7vw,48px);line-height:.98;letter-spacing:-.045em;max-width:560px}
-.weekClosedScore{position:relative;z-index:2;margin:12px 0 0;color:var(--muted);font-weight:800}
-.weekResultDismiss{position:relative;z-index:2;margin-top:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--card2) 80%,transparent);color:var(--text);border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer}
-.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.confetti span{
-  --x:calc((var(--i) * 37) % 100);
-  position:absolute;
-  left:calc(var(--x) * 1%);
-  top:-18px;
-  width:8px;
-  height:14px;
-  border-radius:2px;
-  background:var(--accent);
-  opacity:.86;
-  transform:rotate(calc(var(--i) * 19deg));
-  animation:confettiFall 1.8s cubic-bezier(.2,.7,.3,1) both;
-  animation-delay:calc((var(--i) % 8) * 70ms)
-}
-.confetti span:nth-child(3n){background:#fff}
-.confetti span:nth-child(3n+1){width:6px;height:10px;border-radius:50%}
-.confetti span:nth-child(4n){opacity:.55}
-@keyframes confettiFall{
-  0%{transform:translateY(-10px) rotate(calc(var(--i) * 19deg));opacity:0}
-  12%{opacity:.95}
-  100%{transform:translate3d(18px,250px,0) rotate(calc(240deg + var(--i) * 23deg));opacity:0}
-}
-@media(prefers-reduced-motion:reduce){
-  .confetti span{animation:none;display:none}
-}
-
-.testSeedButton{
-  width:100%;
-  margin-top:10px;
-  border:1px dashed var(--line);
+.fullScreenMenuUtility span{font-size:10px;letter-spacing:.16em;font-weight:900}
+.fullScreenMenuUtility button{
+  border:0;
   background:transparent;
-  color:var(--muted);
-  border-radius:14px;
-  padding:12px 14px;
+  color:#fff;
+  padding:0;
   font-weight:800;
   cursor:pointer;
+  text-decoration:underline;
+  text-underline-offset:5px
 }
-.testSeedButton:hover{
-  color:var(--text);
-  border-color:var(--accent);
+
+.weekResultOverlay{
+  position:fixed;
+  inset:0;
+  z-index:60;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:var(--accent);
+  color:var(--accent-contrast);
+  animation:weekResultIn .48s cubic-bezier(.22,1,.36,1) both
+}
+.weekResultContent{
+  position:relative;
+  z-index:2;
+  width:min(720px,100%);
+  padding:84px 24px 64px;
+  text-align:center
+}
+.weekResultEyebrow{
+  margin:0 0 14px;
+  font-size:12px;
+  letter-spacing:.18em;
+  font-weight:900
+}
+.weekResultContent h2{
+  margin:0 auto;
+  max-width:680px;
+  font-size:clamp(50px,11vw,98px);
+  line-height:.9;
+  letter-spacing:-.065em
+}
+.weekResultScoreLabel{
+  margin:34px 0 12px;
+  font-size:11px;
+  letter-spacing:.18em;
+  font-weight:900;
+  opacity:.72
+}
+.weekResultScore{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:18px;
+  font-weight:900
+}
+.weekResultScore span{display:grid;gap:2px;min-width:90px}
+.weekResultScore b{font-size:13px;opacity:.72}
+.weekResultScore strong{font-size:38px;line-height:1}
+.weekResultScore em{font-style:normal;font-size:22px;opacity:.55}
+.weekResultContinue{
+  margin-top:34px;
+  border:1px solid color-mix(in srgb,var(--accent-contrast) 30%,transparent);
+  background:color-mix(in srgb,var(--accent-contrast) 10%,transparent);
+  color:var(--accent-contrast);
+  border-radius:999px;
+  padding:13px 18px;
+  font-weight:900;
+  cursor:pointer
+}
+.weekResultClose{
+  position:absolute;
+  right:max(18px,calc((100vw - 720px)/2 + 18px));
+  top:18px;
+  z-index:3;
+  width:58px;
+  height:58px;
+  border-radius:18px;
+  border:1px solid color-mix(in srgb,var(--accent-contrast) 24%,transparent);
+  background:color-mix(in srgb,var(--accent-contrast) 8%,transparent);
+  color:var(--accent-contrast);
+  font-size:34px;
+  line-height:1;
+  cursor:pointer
+}
+.confettiBurst{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confettiBurst span{
+  position:absolute;
+  left:var(--x);
+  top:-24px;
+  width:9px;
+  height:18px;
+  border-radius:2px;
+  background:var(--accent-contrast);
+  opacity:.92;
+  animation:celebrationConfetti 2.7s cubic-bezier(.18,.7,.24,1) both;
+  animation-delay:var(--delay)
+}
+.confettiBurst span:nth-child(3n){width:7px;height:7px;border-radius:50%}
+.confettiBurst span:nth-child(4n){width:5px;height:15px;opacity:.62}
+.confettiBurst span:nth-child(5n){background:rgba(255,255,255,.96)}
+@keyframes weekResultIn{
+  from{transform:translateY(-100%)}
+  to{transform:translateY(0)}
+}
+@keyframes celebrationConfetti{
+  0%{transform:translate3d(0,-20px,0) rotate(0);opacity:0}
+  8%{opacity:1}
+  100%{transform:translate3d(var(--drift),110vh,0) rotate(var(--spin));opacity:.15}
+}
+@media(max-width:520px){
+  .fullScreenMenuUtility{margin-top:-92px;padding:0 20px 38px}
+  .weekResultClose{right:12px;top:12px;width:54px;height:54px}
+  .weekResultContent{padding:76px 20px 54px}
+  .weekResultScore{gap:12px}
+}
+@media(prefers-reduced-motion:reduce){
+  .weekResultOverlay{animation:none}
+  .confettiBurst span{animation:none;display:none}
 }
