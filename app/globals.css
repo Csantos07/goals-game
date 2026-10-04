@@ -431,3 +431,30 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   .backgroundThemeGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .backgroundTheme{min-height:78px}
 }
+
+
+/* Supabase auth + multiplayer setup */
+.authShell{min-height:100vh;display:grid;place-items:center;padding:28px 18px;background:radial-gradient(circle at 50% -10%,#222836 0,#0b0d12 38%);color:#f7f7f8}
+.authCard{width:min(460px,100%);padding:28px;border:1px solid rgba(255,255,255,.14);border-radius:28px;background:rgba(21,24,33,.38);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 24px 70px rgba(0,0,0,.22)}
+.authEyebrow{margin:0 0 10px;color:#c9ff54;font-size:11px;font-weight:900;letter-spacing:.16em}
+.authCard h1{margin:0;font-size:clamp(38px,10vw,58px);line-height:.95;letter-spacing:-.055em}
+.authIntro{margin:14px 0 22px;color:#b4bac7;line-height:1.55}
+.authTabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.authTabs button,.authSecondary{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#f7f7f8;border-radius:12px;padding:11px 13px;font-weight:800;cursor:pointer}
+.authTabs button.selected{border-color:#c9ff54;color:#c9ff54;background:rgba(201,255,84,.08)}
+.authForm,.groupSetupBlock{display:grid;gap:14px}
+.authForm label,.groupSetupBlock label{display:grid;gap:7px;color:#b4bac7;font-size:12px;font-weight:800}
+.authForm input,.groupSetupBlock input{width:100%;border:1px solid rgba(255,255,255,.14);background:rgba(7,9,14,.42);color:#fff;border-radius:13px;padding:13px 14px;font-size:16px}
+.authPrimary{border:0;border-radius:14px;background:#c9ff54;color:#10120c;padding:14px 16px;font-weight:900;cursor:pointer}
+.authPrimary:disabled,.authSecondary:disabled{opacity:.55;cursor:not-allowed}
+.authMessage{margin:0;color:#d8dce4;font-size:13px;line-height:1.5}
+.groupSetupCard h2{margin:0;font-size:18px}
+.groupDivider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#777f8f;font-size:12px}
+.groupDivider::before,.groupDivider::after{content:"";height:1px;flex:1;background:rgba(255,255,255,.12)}
+.sessionBar{position:relative;z-index:12;width:min(720px,calc(100% - 36px));margin:12px auto -4px;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(11,13,18,.56);color:#f7f7f8;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.sessionBar>div:first-child{display:grid;gap:2px}
+.sessionBar strong{font-size:13px}.sessionBar span{color:#9ca3af;font-size:11px}
+.sessionBarActions{display:flex;align-items:center;gap:8px}
+.sessionBar code{padding:6px 8px;border-radius:9px;background:rgba(255,255,255,.08);color:#c9ff54;font-size:11px}
+.sessionBar button{border:1px solid rgba(255,255,255,.14);background:transparent;color:#fff;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer}
+@media(max-width:520px){.authCard{padding:22px}.sessionBar{align-items:flex-start}.sessionBarActions{flex-direction:column;align-items:flex-end}}
