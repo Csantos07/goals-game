@@ -288,32 +288,32 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   inset:0;
   z-index:1;
   pointer-events:none;
-  background:linear-gradient(180deg,rgba(7,9,14,.50),rgba(7,9,14,.38) 36%,rgba(7,9,14,.56))
+  background:linear-gradient(180deg,rgba(7,9,14,.18),rgba(7,9,14,.10) 36%,rgba(7,9,14,.22))
 }
 .appFrame.hasBackground .shell{position:relative;z-index:2}
 .appFrame.hasBackground .card,
 .appFrame.hasBackground .progressCard,
 .appFrame.hasBackground .score,
 .appFrame.hasBackground .vacationTile{
-  background:color-mix(in srgb,var(--card) 42%,transparent);
-  border-color:color-mix(in srgb,var(--text) 14%,transparent);
-  backdrop-filter:blur(18px) saturate(1.08);
-  -webkit-backdrop-filter:blur(18px) saturate(1.08)
+  background:color-mix(in srgb,var(--card) 18%,transparent);
+  border-color:color-mix(in srgb,var(--text) 18%,transparent);
+  backdrop-filter:blur(7px) saturate(1.04);
+  -webkit-backdrop-filter:blur(7px) saturate(1.04)
 }
 .appFrame.hasBackground .goalCard{
-  background:color-mix(in srgb,var(--card2) 36%,transparent);
-  border-color:color-mix(in srgb,var(--text) 12%,transparent);
-  backdrop-filter:blur(16px) saturate(1.08);
-  -webkit-backdrop-filter:blur(16px) saturate(1.08)
+  background:color-mix(in srgb,var(--card2) 14%,transparent);
+  border-color:color-mix(in srgb,var(--text) 16%,transparent);
+  backdrop-filter:blur(6px) saturate(1.04);
+  -webkit-backdrop-filter:blur(6px) saturate(1.04)
 }
 .appFrame.hasBackground .add,
 .appFrame.hasBackground .miniAdd,
 .appFrame.hasBackground .goalActions button,
 .appFrame.hasBackground .day:not(.complete),
 .appFrame.hasBackground .repeatMark{
-  background:color-mix(in srgb,var(--soft) 32%,transparent);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px)
+  background:color-mix(in srgb,var(--soft) 16%,transparent);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px)
 }
 .appFrame.hasBackground .top h1,
 .appFrame.hasBackground .top .sub{
@@ -406,15 +406,15 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 @media(max-width:520px){
   .gameBackground{background-position:center top}
   .appFrame.hasBackground::before{
-    background:linear-gradient(180deg,rgba(7,9,14,.34),rgba(7,9,14,.26) 26%,rgba(7,9,14,.44))
+    background:linear-gradient(180deg,rgba(7,9,14,.14),rgba(7,9,14,.07) 26%,rgba(7,9,14,.18))
   }
   .appFrame.hasBackground .card,
   .appFrame.hasBackground .progressCard,
   .appFrame.hasBackground .score,
   .appFrame.hasBackground .vacationTile{
-    background:color-mix(in srgb,var(--card) 30%,transparent);
-    backdrop-filter:blur(14px) saturate(1.04);
-    -webkit-backdrop-filter:blur(14px) saturate(1.04)
+    background:color-mix(in srgb,var(--card) 16%,transparent);
+    backdrop-filter:blur(6px) saturate(1.03);
+    -webkit-backdrop-filter:blur(6px) saturate(1.03)
   }
   .appFrame.hasBackground .goalCard{
     background:color-mix(in srgb,var(--card2) 24%,transparent);
