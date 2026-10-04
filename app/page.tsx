@@ -36,7 +36,7 @@ export default async function Home() {
 
   const { data: memberships, error: membershipError } = await supabase
     .from("group_members")
-    .select("group_id, role, groups(id, name, invite_code)")
+    .select("group_id, role, joined_at, groups(id, name, invite_code)")
     .eq("profile_id", user.id)
     .order("joined_at", { ascending: true })
     .limit(1);
@@ -59,17 +59,56 @@ export default async function Home() {
   const groupValue = membership.groups;
   const group = Array.isArray(groupValue) ? groupValue[0] : groupValue;
 
-  const { count: memberCount } = await supabase
+  const { data: memberRows, error: memberError } = await supabase
     .from("group_members")
-    .select("*", { count: "exact", head: true })
-    .eq("group_id", membership.group_id);
+    .select("profile_id, joined_at")
+    .eq("group_id", membership.group_id)
+    .order("joined_at", { ascending: true });
+
+  if (memberError) {
+    return (
+      <BackendSetup
+        signedIn
+        message="Your group exists, but its player list could not be loaded."
+      />
+    );
+  }
+
+  const memberIds = (memberRows ?? []).map(member => member.profile_id);
+  const { data: memberProfiles, error: memberProfileError } = memberIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", memberIds)
+    : { data: [], error: null };
+
+  if (memberProfileError) {
+    return (
+      <BackendSetup
+        signedIn
+        message="Your group exists, but its player profiles could not be loaded."
+      />
+    );
+  }
+
+  const profileById = new Map(
+    (memberProfiles ?? []).map(member => [member.id, member.display_name])
+  );
+
+  const members = (memberRows ?? [])
+    .map(member => ({
+      id: member.profile_id,
+      displayName: profileById.get(member.profile_id) ?? "Player"
+    }));
 
   return (
     <GameBoard
+      currentUserId={user.id}
       displayName={profile.display_name}
+      groupId={membership.group_id}
       groupName={group?.name ?? "Goals Game"}
       inviteCode={group?.invite_code ?? ""}
-      memberCount={memberCount ?? 1}
+      members={members}
     />
   );
 }
