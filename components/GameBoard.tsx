@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import SessionBar from "@/components/SessionBar";
 
 type Player = "Carlo" | "Lindsey";
 type AssignedBy = "self" | "partner";
@@ -136,7 +137,17 @@ function compressBackground(file: File): Promise<string> {
   });
 }
 
-export default function GameBoard() {
+export default function GameBoard({
+  displayName,
+  groupName,
+  inviteCode,
+  memberCount
+}: {
+  displayName: string;
+  groupName: string;
+  inviteCode: string;
+  memberCount: number;
+}) {
   const [goals, setGoals] = useState(initialGoals);
   const [active, setActive] = useState<Player>("Carlo");
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -528,6 +539,13 @@ export default function GameBoard() {
                 <p className="backgroundHint">Images automatically crop to fill the screen on desktop and mobile.</p>
                 {backgroundError && <p className="backgroundError" role="alert">{backgroundError}</p>}
               </div>
+
+              <SessionBar
+                displayName={displayName}
+                groupName={groupName}
+                inviteCode={inviteCode}
+                memberCount={memberCount}
+              />
             </div>
           )}
         </aside>
