@@ -159,6 +159,10 @@ export default function GameBoard() {
   const today = getCurrentDayKey();
   const isSunday = new Date().getDay() === 0;
   const weekLabel = getWeekLabel();
+
+  useEffect(() => {
+    if (isSunday) setShowWeekResult(true);
+  }, [isSunday]);
   const accentContrast = contrastText(accent);
   const themeStyle = {
     "--accent": accent,
@@ -281,8 +285,6 @@ export default function GameBoard() {
     : scores.Carlo > scores.Lindsey
       ? "Carlo"
       : "Lindsey";
-  const weekClosed = isSunday || showWeekResult;
-
   const activeEarned = activeGoals.reduce((sum, goal) => sum + earnedPoints(goal), 0);
   const activePossible = activeGoals.reduce((sum, goal) => sum + possiblePoints(goal), 0);
   const progress = activePossible ? activeEarned / activePossible * 100 : 0;
@@ -314,6 +316,11 @@ export default function GameBoard() {
             <button onClick={() => setShowSettings(v => !v)} aria-expanded={showSettings}>Settings</button>
           </nav>
 
+          <div className="fullScreenMenuUtility">
+            <span>TESTING</span>
+            <button onClick={resetToTestSeed}>↺ Reset to test seed</button>
+          </div>
+
           {showSettings && (
             <div className="fullScreenSettings">
               <div className="modeSwitch wordSwitch">
@@ -340,19 +347,37 @@ export default function GameBoard() {
           )}
         </aside>
 
-        {weekClosed && (
-          <section className="weekClosedBanner" aria-live="polite">
-            <div className="confetti" aria-hidden="true">
-              {Array.from({ length: 24 }, (_, index) => (
-                <span key={index} style={{ "--i": index } as CSSProperties} />
+        {showWeekResult && (
+          <section className="weekResultOverlay" role="dialog" aria-modal="true" aria-labelledby="week-result-title">
+            <div className="confettiBurst" aria-hidden="true">
+              {Array.from({ length: 90 }, (_, index) => (
+                <span
+                  key={index}
+                  style={{
+                    "--x": `${(index * 37) % 100}%`,
+                    "--delay": `${(index % 15) * 42}ms`,
+                    "--drift": `${((index % 9) - 4) * 18}px`,
+                    "--spin": `${180 + (index % 11) * 34}deg`
+                  } as CSSProperties}
+                />
               ))}
             </div>
-            <p className="eyebrow">THIS WEEK&apos;S GAME IS CLOSED</p>
-            <h2>{winner ? `${winner} wins the week.` : "This week ends in a tie."}</h2>
-            <p className="weekClosedScore">Carlo {scores.Carlo} · Lindsey {scores.Lindsey}</p>
-            {!isSunday && (
-              <button className="weekResultDismiss" onClick={() => setShowWeekResult(false)}>Exit Sunday preview</button>
-            )}
+
+            <button className="weekResultClose" onClick={() => setShowWeekResult(false)} aria-label="Close week result">×</button>
+
+            <div className="weekResultContent">
+              <p className="weekResultEyebrow">THIS WEEK&apos;S GAME IS CLOSED</p>
+              <h2 id="week-result-title">{winner ? `${winner} wins the week.` : "This week ends in a tie."}</h2>
+              <p className="weekResultScoreLabel">FINAL SCORE</p>
+              <div className="weekResultScore">
+                <span><b>Carlo</b><strong>{scores.Carlo}</strong></span>
+                <em>—</em>
+                <span><b>Lindsey</b><strong>{scores.Lindsey}</strong></span>
+              </div>
+              <button className="weekResultContinue" onClick={() => setShowWeekResult(false)}>
+                {isSunday ? "View final board" : "Back to the game"}
+              </button>
+            </div>
           </section>
         )}
 
@@ -417,10 +442,6 @@ export default function GameBoard() {
 
         <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
           🏁 {isSunday ? "View final result" : "Preview Sunday closeout"}
-        </button>
-
-        <button className="testSeedButton" onClick={resetToTestSeed}>
-          ↺ Reset to test seed
         </button>
 
         {showEnvelopes && (
