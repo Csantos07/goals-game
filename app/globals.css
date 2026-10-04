@@ -154,26 +154,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 }
 
 
-.fullScreenMenuUtility{
-  width:min(720px,100%);
-  margin:-108px auto 0;
-  padding:0 24px 44px;
-  display:flex;
-  align-items:center;
-  gap:14px;
-  color:rgba(255,255,255,.78)
-}
-.fullScreenMenuUtility span{font-size:10px;letter-spacing:.16em;font-weight:900}
-.fullScreenMenuUtility button{
-  border:0;
-  background:transparent;
-  color:#fff;
-  padding:0;
-  font-weight:800;
-  cursor:pointer;
-  text-decoration:underline;
-  text-underline-offset:5px
-}
 
 .weekResultOverlay{
   position:fixed;
