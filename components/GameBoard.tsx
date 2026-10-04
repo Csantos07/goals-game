@@ -23,12 +23,13 @@ const ONE_TIME_POINTS = 50;
 const DAILY_POINTS = 10;
 const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
 const STORAGE_KEY = "goals-game:v1";
+const SUNDAY_CELEBRATION_KEY = "goals-game:last-sunday-celebration";
 
 const initialGoals: Goal[] = [
   { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
   { id: 2, player: "Carlo", title: "Wake up at 6:15", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
   { id: 3, player: "Carlo", title: "Monday working in the office", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
-  { id: 4, player: "Carlo", title: "Close-out routine at work", assignedBy: "partner", type: "daily", done: false, dailyDone: [] },
+  { id: 4, player: "Carlo", title: "Do something for Nico before work", assignedBy: "partner", type: "daily", done: false, dailyDone: [] },
   { id: 5, player: "Lindsey", title: "Call Advent", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
   { id: 6, player: "Lindsey", title: "Nurse once and pump four times", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
   { id: 7, player: "Lindsey", title: "Monday morning gym", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
@@ -38,6 +39,20 @@ const initialGoals: Goal[] = [
 function getCurrentDayKey(): DayKey {
   const jsDay = new Date().getDay();
   return DAYS[(jsDay + 6) % 7];
+}
+
+function getWeekKey() {
+  const now = new Date();
+  const jsDay = now.getDay();
+  const diffToMonday = jsDay === 0 ? -6 : 1 - jsDay;
+  const monday = new Date(now);
+  monday.setHours(12, 0, 0, 0);
+  monday.setDate(now.getDate() + diffToMonday);
+
+  const year = monday.getFullYear();
+  const month = String(monday.getMonth() + 1).padStart(2, "0");
+  const day = String(monday.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function getWeekLabel() {
@@ -89,6 +104,7 @@ export default function GameBoard() {
   const [menuButtonVisible, setMenuButtonVisible] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showEnvelopes, setShowEnvelopes] = useState(false);
+  const [showWeekResult, setShowWeekResult] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
   const [vacationBalance, setVacationBalance] = useState(350);
@@ -106,7 +122,13 @@ export default function GameBoard() {
           vacationBalance?: number;
         };
 
-        if (Array.isArray(parsed.goals)) setGoals(parsed.goals);
+        if (Array.isArray(parsed.goals)) {
+          setGoals(parsed.goals.map(goal =>
+            goal.id === 4 && goal.title === "Close-out routine at work"
+              ? { ...goal, title: "Do something for Nico before work" }
+              : goal
+          ));
+        }
         if (parsed.active === "Carlo" || parsed.active === "Lindsey") setActive(parsed.active);
         if (parsed.themeMode === "dark" || parsed.themeMode === "light") setThemeMode(parsed.themeMode);
         if (typeof parsed.accent === "string") setAccent(parsed.accent);
@@ -150,7 +172,24 @@ export default function GameBoard() {
   }, [showMenu]);
 
   const today = getCurrentDayKey();
+  const isSunday = new Date().getDay() === 0;
   const weekLabel = getWeekLabel();
+  const weekKey = getWeekKey();
+
+  useEffect(() => {
+    if (!hasLoadedSavedState || !isSunday) return;
+
+    try {
+      const lastCelebratedWeek = window.localStorage.getItem(SUNDAY_CELEBRATION_KEY);
+      if (lastCelebratedWeek !== weekKey) {
+        setShowWeekResult(true);
+        window.localStorage.setItem(SUNDAY_CELEBRATION_KEY, weekKey);
+      }
+    } catch (error) {
+      console.warn("Could not track Sunday celebration state.", error);
+      setShowWeekResult(true);
+    }
+  }, [hasLoadedSavedState, isSunday, weekKey]);
   const accentContrast = contrastText(accent);
   const themeStyle = {
     "--accent": accent,
@@ -244,6 +283,11 @@ export default function GameBoard() {
       ? "Carlo leads"
       : "Lindsey leads";
 
+  const winner = scores.Carlo === scores.Lindsey
+    ? null
+    : scores.Carlo > scores.Lindsey
+      ? "Carlo"
+      : "Lindsey";
   const activeEarned = activeGoals.reduce((sum, goal) => sum + earnedPoints(goal), 0);
   const activePossible = activeGoals.reduce((sum, goal) => sum + possiblePoints(goal), 0);
   const progress = activePossible ? activeEarned / activePossible * 100 : 0;
@@ -300,6 +344,40 @@ export default function GameBoard() {
             </div>
           )}
         </aside>
+
+        {showWeekResult && (
+          <section className="weekResultOverlay" role="dialog" aria-modal="true" aria-labelledby="week-result-title">
+            <div className="confettiBurst" aria-hidden="true">
+              {Array.from({ length: 120 }, (_, index) => (
+                <span
+                  key={index}
+                  style={{
+                    "--x": `${(index * 37) % 100}%`,
+                    "--delay": `${(index % 20) * 80}ms`,
+                    "--drift": `${((index % 9) - 4) * 18}px`,
+                    "--spin": `${180 + (index % 11) * 34}deg`
+                  } as CSSProperties}
+                />
+              ))}
+            </div>
+
+            <button className="weekResultClose" onClick={() => setShowWeekResult(false)} aria-label="Close week result">×</button>
+
+            <div className="weekResultContent">
+              <p className="weekResultEyebrow">THIS WEEK&apos;S GAME IS CLOSED</p>
+              <h2 id="week-result-title">{winner ? `${winner} wins the week.` : "This week ends in a tie."}</h2>
+              <p className="weekResultScoreLabel">FINAL SCORE</p>
+              <div className="weekResultScore">
+                <span><b>Carlo</b><strong>{scores.Carlo}</strong></span>
+                <em>—</em>
+                <span><b>Lindsey</b><strong>{scores.Lindsey}</strong></span>
+              </div>
+              <button className="weekResultContinue" onClick={() => setShowWeekResult(false)}>
+                View final board
+              </button>
+            </div>
+          </section>
+        )}
 
         <section className="scoreboard">
           <Score name="Carlo" score={scores.Carlo} max={maxPoints("Carlo")} active={active === "Carlo"} onClick={() => setActive("Carlo")} />
@@ -360,9 +438,11 @@ export default function GameBoard() {
           <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
         </section>
 
-        <button className="closeWeek" onClick={() => alert(`Current score — Carlo ${scores.Carlo}, Lindsey ${scores.Lindsey}. Keep playing through Sunday!`)}>
-          🏁 Preview week result
-        </button>
+        {isSunday && (
+          <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
+            🏁 View final result
+          </button>
+        )}
 
         {showEnvelopes && (
           <section className="envelopePage">
