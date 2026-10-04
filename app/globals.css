@@ -257,14 +257,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   width:9px;
   height:18px;
   border-radius:2px;
-  background:var(--accent-contrast);
-  opacity:.92;
-  animation:celebrationConfetti 2.7s cubic-bezier(.18,.7,.24,1) both;
+  background:#ffffff;
+  opacity:.94;
+  animation:celebrationConfetti 5.4s cubic-bezier(.16,.62,.24,1) both;
   animation-delay:var(--delay)
 }
+.confettiBurst span:nth-child(7n+1){background:#ffe45e}
+.confettiBurst span:nth-child(7n+2){background:#ffb703}
+.confettiBurst span:nth-child(7n+3){background:#fb7185}
+.confettiBurst span:nth-child(7n+4){background:#38bdf8}
+.confettiBurst span:nth-child(7n+5){background:#22c55e}
+.confettiBurst span:nth-child(7n+6){background:#f97316}
+.confettiBurst span:nth-child(7n){background:#ffffff}
 .confettiBurst span:nth-child(3n){width:7px;height:7px;border-radius:50%}
-.confettiBurst span:nth-child(4n){width:5px;height:15px;opacity:.62}
-.confettiBurst span:nth-child(5n){background:rgba(255,255,255,.96)}
+.confettiBurst span:nth-child(4n){width:5px;height:15px;opacity:.72}
 @keyframes weekResultIn{
   from{transform:translateY(-100%)}
   to{transform:translateY(0)}
@@ -272,7 +278,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 @keyframes celebrationConfetti{
   0%{transform:translate3d(0,-20px,0) rotate(0);opacity:0}
   8%{opacity:1}
-  100%{transform:translate3d(var(--drift),110vh,0) rotate(var(--spin));opacity:.15}
+  72%{opacity:.95}
+  100%{transform:translate3d(var(--drift),132vh,0) rotate(var(--spin));opacity:.08}
 }
 @media(max-width:520px){
   .fullScreenMenuUtility{margin-top:-92px;padding:0 20px 38px}
