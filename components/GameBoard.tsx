@@ -515,22 +515,6 @@ export default function GameBoard({
   }, [loadData]);
 
   useEffect(() => {
-    if (!ready) return;
-
-    const timer = window.setTimeout(() => {
-      void supabase.from("user_preferences").upsert({
-        profile_id: currentUserId,
-        theme_mode: themeMode,
-        accent,
-        active_profile_id: activeProfileId,
-        selected_background_id: selectedBackgroundId
-      }, { onConflict: "profile_id" });
-    }, 180);
-
-    return () => window.clearTimeout(timer);
-  }, [accent, activeProfileId, currentUserId, ready, selectedBackgroundId, supabase, themeMode]);
-
-  useEffect(() => {
     let lastY = window.scrollY;
 
     const onScroll = () => {
@@ -552,12 +536,7 @@ export default function GameBoard({
     setShowWeekResult(true);
     setLastCelebratedWeek(weekStart);
 
-    void supabase
-      .from("user_preferences")
-      .upsert({
-        profile_id: currentUserId,
-        last_celebrated_week: weekStart
-      }, { onConflict: "profile_id" });
+    void persistPreferences({ lastCelebratedWeek: weekStart });
   }, [currentUserId, isSunday, lastCelebratedWeek, ready, supabase, weekStart]);
 
   useEffect(() => {
@@ -579,6 +558,45 @@ export default function GameBoard({
       void supabase.removeChannel(channel);
     };
   }, [groupId, loadData, ready, supabase]);
+
+  async function persistPreferences(overrides: {
+    themeMode?: ThemeMode;
+    accent?: string;
+    activeProfileId?: string;
+    selectedBackgroundId?: string | null;
+    lastCelebratedWeek?: string | null;
+  }) {
+    const nextThemeMode = overrides.themeMode ?? themeMode;
+    const nextAccent = overrides.accent ?? accent;
+    const nextActiveProfileId = overrides.activeProfileId ?? activeProfileId;
+    const nextSelectedBackgroundId =
+      Object.prototype.hasOwnProperty.call(overrides, "selectedBackgroundId")
+        ? overrides.selectedBackgroundId ?? null
+        : selectedBackgroundId;
+    const nextLastCelebratedWeek =
+      Object.prototype.hasOwnProperty.call(overrides, "lastCelebratedWeek")
+        ? overrides.lastCelebratedWeek ?? null
+        : lastCelebratedWeek;
+
+    const { error } = await supabase.from("user_preferences").upsert({
+      profile_id: currentUserId,
+      theme_mode: nextThemeMode,
+      accent: nextAccent,
+      active_profile_id: nextActiveProfileId,
+      selected_background_id: nextSelectedBackgroundId,
+      last_celebrated_week: nextLastCelebratedWeek,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "profile_id" });
+
+    if (error) {
+      console.error("Could not save Goals Game settings.", error);
+      setSyncError("Your settings did not save. Tap Retry after checking your connection.");
+      return false;
+    }
+
+    setSyncError("");
+    return true;
+  }
 
   const accentContrast = contrastText(accent);
   const themeStyle = {
@@ -786,6 +804,7 @@ export default function GameBoard({
 
       setBackgrounds(current => [...current, nextBackground]);
       setSelectedBackgroundId(nextBackground.id);
+      await persistPreferences({ selectedBackgroundId: nextBackground.id });
     } catch (error) {
       console.warn("Could not upload background.", error);
       setBackgroundError(error instanceof Error ? error.message : "Could not upload that background.");
@@ -800,6 +819,7 @@ export default function GameBoard({
     setBackgrounds(current => current.filter(background => background.id !== id));
     setSelectedBackgroundId(null);
     setBackgroundError("");
+    await persistPreferences({ selectedBackgroundId: null });
 
     const { error } = await supabase
       .from("user_backgrounds")
@@ -877,8 +897,24 @@ export default function GameBoard({
           {showSettings && (
             <div className="fullScreenSettings">
               <div className="modeSwitch wordSwitch">
-                <button className={themeMode === "dark" ? "selected" : ""} onClick={() => setThemeMode("dark")}>Dark</button>
-                <button className={themeMode === "light" ? "selected" : ""} onClick={() => setThemeMode("light")}>Light</button>
+                <button
+                  className={themeMode === "dark" ? "selected" : ""}
+                  onClick={() => {
+                    setThemeMode("dark");
+                    void persistPreferences({ themeMode: "dark" });
+                  }}
+                >
+                  Dark
+                </button>
+                <button
+                  className={themeMode === "light" ? "selected" : ""}
+                  onClick={() => {
+                    setThemeMode("light");
+                    void persistPreferences({ themeMode: "light" });
+                  }}
+                >
+                  Light
+                </button>
               </div>
 
               <div className="swatches">
@@ -887,12 +923,23 @@ export default function GameBoard({
                     key={color}
                     className={"swatch " + (accent.toLowerCase() === color.toLowerCase() ? "selected" : "")}
                     style={{ background: color }}
-                    onClick={() => setAccent(color)}
+                    onClick={() => {
+                      setAccent(color);
+                      void persistPreferences({ accent: color });
+                    }}
                     aria-label={"Use " + color + " accent"}
                   />
                 ))}
                 <label className="customColor">
-                  <input type="color" value={accent} onChange={event => setAccent(event.target.value)} />
+                  <input
+                    type="color"
+                    value={accent}
+                    onChange={event => {
+                      const nextAccent = event.target.value;
+                      setAccent(nextAccent);
+                      void persistPreferences({ accent: nextAccent });
+                    }}
+                  />
                   <span>Custom</span>
                 </label>
               </div>
@@ -909,7 +956,11 @@ export default function GameBoard({
                 <div className="backgroundThemeGrid">
                   <button
                     className={"backgroundTheme defaultBackground " + (selectedBackgroundId === null ? "selected" : "")}
-                    onClick={() => { setSelectedBackgroundId(null); setBackgroundError(""); }}
+                    onClick={() => {
+                      setSelectedBackgroundId(null);
+                      setBackgroundError("");
+                      void persistPreferences({ selectedBackgroundId: null });
+                    }}
                     aria-pressed={selectedBackgroundId === null}
                   >
                     <span>Default</span>
@@ -920,7 +971,11 @@ export default function GameBoard({
                       key={background.id}
                       className={"backgroundTheme " + (selectedBackgroundId === background.id ? "selected" : "")}
                       style={{ backgroundImage: "url(" + background.dataUrl + ")" }}
-                      onClick={() => { setSelectedBackgroundId(background.id); setBackgroundError(""); }}
+                      onClick={() => {
+                        setSelectedBackgroundId(background.id);
+                        setBackgroundError("");
+                        void persistPreferences({ selectedBackgroundId: background.id });
+                      }}
                       aria-pressed={selectedBackgroundId === background.id}
                       title={background.name}
                     >
@@ -1012,7 +1067,10 @@ export default function GameBoard({
                 score={scores.get(member.id) ?? 0}
                 max={maxPoints(member.id)}
                 active={activeMember?.id === member.id}
-                onClick={() => setActiveProfileId(member.id)}
+                onClick={() => {
+                  setActiveProfileId(member.id);
+                  void persistPreferences({ activeProfileId: member.id });
+                }}
               />
             </Fragment>
           ))}
