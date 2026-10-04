@@ -239,16 +239,12 @@ grant select, insert, update on public.weeks to authenticated;
 grant select, insert, update, delete on public.goals to authenticated;
 grant select, insert, delete on public.goal_completions to authenticated;
 
-create policy "users can view their profile"
-on public.profiles for select
-to authenticated
-using (id = (select auth.uid()));
-
-create policy "group members can view one another"
+create policy "users can view self and group members"
 on public.profiles for select
 to authenticated
 using (
-  exists (
+  id = (select auth.uid())
+  or exists (
     select 1
     from public.group_members mine
     join public.group_members theirs on theirs.group_id = mine.group_id
