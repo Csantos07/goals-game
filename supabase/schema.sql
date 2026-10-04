@@ -68,6 +68,9 @@ create index weeks_group_id_idx on public.weeks(group_id);
 create index goals_week_id_idx on public.goals(week_id);
 create index goals_player_id_idx on public.goals(player_id);
 create index goal_completions_goal_id_idx on public.goal_completions(goal_id);
+create index groups_created_by_idx on public.groups(created_by);
+create index goals_assigned_by_idx on public.goals(assigned_by);
+create index goal_completions_completed_by_idx on public.goal_completions(completed_by);
 
 -- New auth users automatically get a public profile.
 create or replace function private.handle_new_user()
