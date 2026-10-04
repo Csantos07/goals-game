@@ -2,7 +2,6 @@ import GameBoard from "@/components/GameBoard";
 import AuthScreen from "@/components/AuthScreen";
 import BackendSetup from "@/components/BackendSetup";
 import GroupSetup from "@/components/GroupSetup";
-import SessionBar from "@/components/SessionBar";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -66,14 +65,11 @@ export default async function Home() {
     .eq("group_id", membership.group_id);
 
   return (
-    <>
-      <SessionBar
-        displayName={profile.display_name}
-        groupName={group?.name ?? "Goals Game"}
-        inviteCode={group?.invite_code ?? ""}
-        memberCount={memberCount ?? 1}
-      />
-      <GameBoard />
-    </>
+    <GameBoard
+      displayName={profile.display_name}
+      groupName={group?.name ?? "Goals Game"}
+      inviteCode={group?.invite_code ?? ""}
+      memberCount={memberCount ?? 1}
+    />
   );
 }
