@@ -26,13 +26,13 @@ const STORAGE_KEY = "goals-game:v1";
 
 const initialGoals: Goal[] = [
   { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
-  { id: 2, player: "Carlo", title: "Wake up at 6:15", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
+  { id: 2, player: "Carlo", title: "Wake up at 6:15", assignedBy: "self", type: "daily", done: false, dailyDone: ["Tue", "Wed"] },
   { id: 3, player: "Carlo", title: "Monday working in the office", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
-  { id: 4, player: "Carlo", title: "Do something for Nico before work", assignedBy: "partner", type: "daily", done: false, dailyDone: [] },
+  { id: 4, player: "Carlo", title: "Do something for Nico before work", assignedBy: "partner", type: "daily", done: false, dailyDone: ["Mon", "Tue", "Thu", "Fri"] },
   { id: 5, player: "Lindsey", title: "Call Advent", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
-  { id: 6, player: "Lindsey", title: "Nurse once and pump four times", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
-  { id: 7, player: "Lindsey", title: "Monday morning gym", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
-  { id: 8, player: "Lindsey", title: "Pick dinner every night + night routine", assignedBy: "partner", type: "daily", done: false, dailyDone: [] }
+  { id: 6, player: "Lindsey", title: "Nurse once and pump four times", assignedBy: "self", type: "daily", done: false, dailyDone: ["Tue", "Thu"] },
+  { id: 7, player: "Lindsey", title: "Monday morning gym", assignedBy: "partner", type: "oneTime", done: true, dailyDone: [] },
+  { id: 8, player: "Lindsey", title: "Pick dinner every night + night routine", assignedBy: "partner", type: "daily", done: false, dailyDone: ["Wed", "Fri", "Sat"] }
 ];
 
 function getCurrentDayKey(): DayKey {
@@ -79,7 +79,7 @@ function contrastText(hex: string) {
 
 export default function GameBoard() {
   const [goals, setGoals] = useState(initialGoals);
-  const [active, setActive] = useState<Player>("Carlo");
+  const [active, setActive] = useState<Player>("Lindsey");
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
