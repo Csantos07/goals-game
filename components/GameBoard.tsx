@@ -28,7 +28,7 @@ const initialGoals: Goal[] = [
   { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
   { id: 2, player: "Carlo", title: "Wake up at 6:15", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
   { id: 3, player: "Carlo", title: "Monday working in the office", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
-  { id: 4, player: "Carlo", title: "Close-out routine at work", assignedBy: "partner", type: "daily", done: false, dailyDone: [] },
+  { id: 4, player: "Carlo", title: "Do something for Nico before work", assignedBy: "partner", type: "daily", done: false, dailyDone: [] },
   { id: 5, player: "Lindsey", title: "Call Advent", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
   { id: 6, player: "Lindsey", title: "Nurse once and pump four times", assignedBy: "self", type: "daily", done: false, dailyDone: [] },
   { id: 7, player: "Lindsey", title: "Monday morning gym", assignedBy: "partner", type: "oneTime", done: false, dailyDone: [] },
@@ -89,6 +89,7 @@ export default function GameBoard() {
   const [menuButtonVisible, setMenuButtonVisible] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showEnvelopes, setShowEnvelopes] = useState(false);
+  const [showWeekResult, setShowWeekResult] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
   const [vacationBalance, setVacationBalance] = useState(350);
@@ -150,6 +151,7 @@ export default function GameBoard() {
   }, [showMenu]);
 
   const today = getCurrentDayKey();
+  const isSunday = new Date().getDay() === 0;
   const weekLabel = getWeekLabel();
   const accentContrast = contrastText(accent);
   const themeStyle = {
@@ -244,6 +246,13 @@ export default function GameBoard() {
       ? "Carlo leads"
       : "Lindsey leads";
 
+  const winner = scores.Carlo === scores.Lindsey
+    ? null
+    : scores.Carlo > scores.Lindsey
+      ? "Carlo"
+      : "Lindsey";
+  const weekClosed = isSunday || showWeekResult;
+
   const activeEarned = activeGoals.reduce((sum, goal) => sum + earnedPoints(goal), 0);
   const activePossible = activeGoals.reduce((sum, goal) => sum + possiblePoints(goal), 0);
   const progress = activePossible ? activeEarned / activePossible * 100 : 0;
@@ -300,6 +309,22 @@ export default function GameBoard() {
             </div>
           )}
         </aside>
+
+        {weekClosed && (
+          <section className="weekClosedBanner" aria-live="polite">
+            <div className="confetti" aria-hidden="true">
+              {Array.from({ length: 24 }, (_, index) => (
+                <span key={index} style={{ "--i": index } as CSSProperties} />
+              ))}
+            </div>
+            <p className="eyebrow">THIS WEEK&apos;S GAME IS CLOSED</p>
+            <h2>{winner ? `${winner} wins the week.` : "This week ends in a tie."}</h2>
+            <p className="weekClosedScore">Carlo {scores.Carlo} · Lindsey {scores.Lindsey}</p>
+            {!isSunday && (
+              <button className="weekResultDismiss" onClick={() => setShowWeekResult(false)}>Exit Sunday preview</button>
+            )}
+          </section>
+        )}
 
         <section className="scoreboard">
           <Score name="Carlo" score={scores.Carlo} max={maxPoints("Carlo")} active={active === "Carlo"} onClick={() => setActive("Carlo")} />
@@ -360,8 +385,8 @@ export default function GameBoard() {
           <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
         </section>
 
-        <button className="closeWeek" onClick={() => alert(`Current score — Carlo ${scores.Carlo}, Lindsey ${scores.Lindsey}. Keep playing through Sunday!`)}>
-          🏁 Preview week result
+        <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
+          🏁 {isSunday ? "View final result" : "Preview Sunday closeout"}
         </button>
 
         {showEnvelopes && (
