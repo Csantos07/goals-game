@@ -189,7 +189,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 @keyframes confettiFall{
   0%{transform:translateY(-10px) rotate(calc(var(--i) * 19deg));opacity:0}
   12%{opacity:.95}
-  100%{transform:translate3d(calc((var(--i) % 2 == 0) * 18px),250px,0) rotate(calc(240deg + var(--i) * 23deg));opacity:0}
+  100%{transform:translate3d(18px,250px,0) rotate(calc(240deg + var(--i) * 23deg));opacity:0}
 }
 @media(prefers-reduced-motion:reduce){
   .confetti span{animation:none;display:none}
