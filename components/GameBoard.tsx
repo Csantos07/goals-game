@@ -242,6 +242,30 @@ export default function GameBoard() {
     setGoals(gs => gs.filter(g => g.id !== goal.id));
   }
 
+  function resetToTestSeed() {
+    const seededGoals = initialGoals.map(goal => ({ ...goal, dailyDone: [...goal.dailyDone] }));
+    setGoals(seededGoals);
+    setActive("Lindsey");
+    setShowWeekResult(false);
+    setShowEnvelopes(false);
+    setShowMenu(false);
+
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          goals: seededGoals,
+          active: "Lindsey",
+          themeMode,
+          accent,
+          vacationBalance
+        })
+      );
+    } catch (error) {
+      console.warn("Could not reset Goals Game test seed.", error);
+    }
+  }
+
   const activeGoals = goals.filter(g => g.player === active);
   const selfGoals = activeGoals.filter(g => g.assignedBy === "self");
   const partnerGoals = activeGoals.filter(g => g.assignedBy === "partner");
@@ -393,6 +417,10 @@ export default function GameBoard() {
 
         <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
           🏁 {isSunday ? "View final result" : "Preview Sunday closeout"}
+        </button>
+
+        <button className="testSeedButton" onClick={resetToTestSeed}>
+          ↺ Reset to test seed
         </button>
 
         {showEnvelopes && (
