@@ -270,7 +270,7 @@ export default function GameBoard() {
 
         <aside className={`fullScreenMenu ${showMenu ? "open" : ""}`} aria-hidden={!showMenu}>
           <nav className="fullScreenNav" aria-label="Primary navigation">
-            <button onClick={() => setShowMenu(false)}>Game</button>
+            <button onClick={() => { setShowEnvelopes(false); setShowMenu(false); }}>Game</button>
             <button onClick={() => { setShowEnvelopes(true); setShowMenu(false); }}>Envelopes</button>
             <button onClick={() => setShowSettings(v => !v)} aria-expanded={showSettings}>Settings</button>
           </nav>
