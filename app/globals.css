@@ -288,20 +288,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   inset:0;
   z-index:1;
   pointer-events:none;
-  background:linear-gradient(180deg,rgba(7,9,14,.72),rgba(7,9,14,.56) 36%,rgba(7,9,14,.72))
+  background:linear-gradient(180deg,rgba(7,9,14,.50),rgba(7,9,14,.38) 36%,rgba(7,9,14,.56))
 }
 .appFrame.hasBackground .shell{position:relative;z-index:2}
 .appFrame.hasBackground .card,
 .appFrame.hasBackground .progressCard,
 .appFrame.hasBackground .score,
 .appFrame.hasBackground .vacationTile{
-  background:color-mix(in srgb,var(--card) 62%,transparent);
+  background:color-mix(in srgb,var(--card) 42%,transparent);
   border-color:color-mix(in srgb,var(--text) 14%,transparent);
   backdrop-filter:blur(18px) saturate(1.08);
   -webkit-backdrop-filter:blur(18px) saturate(1.08)
 }
 .appFrame.hasBackground .goalCard{
-  background:color-mix(in srgb,var(--card2) 58%,transparent);
+  background:color-mix(in srgb,var(--card2) 36%,transparent);
   border-color:color-mix(in srgb,var(--text) 12%,transparent);
   backdrop-filter:blur(16px) saturate(1.08);
   -webkit-backdrop-filter:blur(16px) saturate(1.08)
@@ -311,7 +311,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .appFrame.hasBackground .goalActions button,
 .appFrame.hasBackground .day:not(.complete),
 .appFrame.hasBackground .repeatMark{
-  background:color-mix(in srgb,var(--soft) 52%,transparent);
+  background:color-mix(in srgb,var(--soft) 32%,transparent);
   backdrop-filter:blur(10px);
   -webkit-backdrop-filter:blur(10px)
 }
@@ -406,7 +406,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 @media(max-width:520px){
   .gameBackground{background-position:center top}
   .appFrame.hasBackground::before{
-    background:linear-gradient(180deg,rgba(7,9,14,.68),rgba(7,9,14,.64) 26%,rgba(7,9,14,.78))
+    background:linear-gradient(180deg,rgba(7,9,14,.48),rgba(7,9,14,.42) 26%,rgba(7,9,14,.60))
   }
   .backgroundThemeGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .backgroundTheme{min-height:78px}
