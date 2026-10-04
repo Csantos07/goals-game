@@ -194,3 +194,19 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 @media(prefers-reduced-motion:reduce){
   .confetti span{animation:none;display:none}
 }
+
+.testSeedButton{
+  width:100%;
+  margin-top:10px;
+  border:1px dashed var(--line);
+  background:transparent;
+  color:var(--muted);
+  border-radius:14px;
+  padding:12px 14px;
+  font-weight:800;
+  cursor:pointer;
+}
+.testSeedButton:hover{
+  color:var(--text);
+  border-color:var(--accent);
+}
