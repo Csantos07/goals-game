@@ -23,6 +23,7 @@ const ONE_TIME_POINTS = 50;
 const DAILY_POINTS = 10;
 const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
 const STORAGE_KEY = "goals-game:v1";
+const SUNDAY_CELEBRATION_KEY = "goals-game:last-sunday-celebration";
 
 const initialGoals: Goal[] = [
   { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
@@ -38,6 +39,20 @@ const initialGoals: Goal[] = [
 function getCurrentDayKey(): DayKey {
   const jsDay = new Date().getDay();
   return DAYS[(jsDay + 6) % 7];
+}
+
+function getWeekKey() {
+  const now = new Date();
+  const jsDay = now.getDay();
+  const diffToMonday = jsDay === 0 ? -6 : 1 - jsDay;
+  const monday = new Date(now);
+  monday.setHours(12, 0, 0, 0);
+  monday.setDate(now.getDate() + diffToMonday);
+
+  const year = monday.getFullYear();
+  const month = String(monday.getMonth() + 1).padStart(2, "0");
+  const day = String(monday.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function getWeekLabel() {
@@ -159,10 +174,22 @@ export default function GameBoard() {
   const today = getCurrentDayKey();
   const isSunday = new Date().getDay() === 0;
   const weekLabel = getWeekLabel();
+  const weekKey = getWeekKey();
 
   useEffect(() => {
-    if (isSunday) setShowWeekResult(true);
-  }, [isSunday]);
+    if (!hasLoadedSavedState || !isSunday) return;
+
+    try {
+      const lastCelebratedWeek = window.localStorage.getItem(SUNDAY_CELEBRATION_KEY);
+      if (lastCelebratedWeek !== weekKey) {
+        setShowWeekResult(true);
+        window.localStorage.setItem(SUNDAY_CELEBRATION_KEY, weekKey);
+      }
+    } catch (error) {
+      console.warn("Could not track Sunday celebration state.", error);
+      setShowWeekResult(true);
+    }
+  }, [hasLoadedSavedState, isSunday, weekKey]);
   const accentContrast = contrastText(accent);
   const themeStyle = {
     "--accent": accent,
@@ -265,6 +292,7 @@ export default function GameBoard() {
           vacationBalance
         })
       );
+      window.localStorage.removeItem(SUNDAY_CELEBRATION_KEY);
     } catch (error) {
       console.warn("Could not reset Goals Game test seed.", error);
     }
