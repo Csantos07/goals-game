@@ -152,3 +152,45 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   .fullScreenNav{padding:110px 20px 60px;gap:18px}
   .fullScreenSettings{margin-top:-130px;padding:0 20px 40px}
 }
+
+
+.weekClosedBanner{
+  position:relative;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line));
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 18%,var(--card)),var(--card));
+  border-radius:26px;
+  padding:26px 22px;
+  margin:2px 0 18px;
+  box-shadow:0 18px 50px rgba(0,0,0,.14)
+}
+.weekClosedBanner .eyebrow{margin-bottom:9px}
+.weekClosedBanner h2{position:relative;z-index:2;margin:0;font-size:clamp(30px,7vw,48px);line-height:.98;letter-spacing:-.045em;max-width:560px}
+.weekClosedScore{position:relative;z-index:2;margin:12px 0 0;color:var(--muted);font-weight:800}
+.weekResultDismiss{position:relative;z-index:2;margin-top:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--card2) 80%,transparent);color:var(--text);border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer}
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti span{
+  --x:calc((var(--i) * 37) % 100);
+  position:absolute;
+  left:calc(var(--x) * 1%);
+  top:-18px;
+  width:8px;
+  height:14px;
+  border-radius:2px;
+  background:var(--accent);
+  opacity:.86;
+  transform:rotate(calc(var(--i) * 19deg));
+  animation:confettiFall 1.8s cubic-bezier(.2,.7,.3,1) both;
+  animation-delay:calc((var(--i) % 8) * 70ms)
+}
+.confetti span:nth-child(3n){background:#fff}
+.confetti span:nth-child(3n+1){width:6px;height:10px;border-radius:50%}
+.confetti span:nth-child(4n){opacity:.55}
+@keyframes confettiFall{
+  0%{transform:translateY(-10px) rotate(calc(var(--i) * 19deg));opacity:0}
+  12%{opacity:.95}
+  100%{transform:translate3d(calc((var(--i) % 2 == 0) * 18px),250px,0) rotate(calc(240deg + var(--i) * 23deg));opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .confetti span{animation:none;display:none}
+}
