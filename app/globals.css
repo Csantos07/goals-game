@@ -271,3 +271,163 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   .weekResultOverlay{animation:none}
   .confettiBurst span{animation:none;display:none}
 }
+
+
+.gameBackground{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  filter:saturate(.92) contrast(1.03)
+}
+.appFrame.hasBackground::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(7,9,14,.18),rgba(7,9,14,.10) 36%,rgba(7,9,14,.22))
+}
+.appFrame.hasBackground .shell{position:relative;z-index:2}
+.appFrame.hasBackground .card,
+.appFrame.hasBackground .progressCard,
+.appFrame.hasBackground .score,
+.appFrame.hasBackground .vacationTile{
+  background:color-mix(in srgb,var(--card) 18%,transparent);
+  border-color:color-mix(in srgb,var(--text) 18%,transparent);
+  backdrop-filter:blur(7px) saturate(1.04);
+  -webkit-backdrop-filter:blur(7px) saturate(1.04)
+}
+.appFrame.hasBackground .goalCard{
+  background:color-mix(in srgb,var(--card2) 14%,transparent);
+  border-color:color-mix(in srgb,var(--text) 16%,transparent);
+  backdrop-filter:blur(6px) saturate(1.04);
+  -webkit-backdrop-filter:blur(6px) saturate(1.04)
+}
+.appFrame.hasBackground .add,
+.appFrame.hasBackground .miniAdd,
+.appFrame.hasBackground .goalActions button,
+.appFrame.hasBackground .day:not(.complete),
+.appFrame.hasBackground .repeatMark{
+  background:color-mix(in srgb,var(--soft) 16%,transparent);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px)
+}
+.appFrame.hasBackground .top h1,
+.appFrame.hasBackground .top .sub{
+  text-shadow:0 2px 18px rgba(0,0,0,.52)
+}
+
+.backgroundSettings{
+  display:grid;
+  gap:12px;
+  padding-top:4px
+}
+.backgroundSettingsHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  gap:14px;
+  color:#fff
+}
+.backgroundSettingsHead>div{display:grid;gap:2px}
+.backgroundSettingsHead span{font-weight:900;font-size:16px}
+.backgroundSettingsHead small{font-size:11px;opacity:.72}
+.backgroundThemeGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px
+}
+.backgroundTheme{
+  min-height:86px;
+  border:2px solid rgba(255,255,255,.22);
+  border-radius:15px;
+  background-size:cover;
+  background-position:center;
+  position:relative;
+  overflow:hidden;
+  cursor:pointer;
+  padding:0
+}
+.backgroundTheme::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,transparent 35%,rgba(0,0,0,.78))
+}
+.backgroundTheme span{
+  position:absolute;
+  z-index:1;
+  left:9px;
+  right:9px;
+  bottom:8px;
+  color:#fff;
+  font-size:11px;
+  font-weight:900;
+  text-align:left;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
+.backgroundTheme.selected{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.24)}
+.defaultBackground{
+  background:linear-gradient(135deg,#151821,#0b0d12)
+}
+.backgroundActions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center
+}
+.backgroundUpload,
+.backgroundRemove{
+  border:1px solid rgba(255,255,255,.26);
+  border-radius:12px;
+  background:rgba(255,255,255,.10);
+  color:#fff;
+  padding:10px 12px;
+  font-weight:800;
+  cursor:pointer
+}
+.backgroundUpload input{display:none}
+.backgroundUpload.disabled{opacity:.45;cursor:not-allowed}
+.backgroundRemove{background:transparent}
+.backgroundHint,
+.backgroundError{
+  margin:0;
+  font-size:11px;
+  line-height:1.45
+}
+.backgroundHint{color:rgba(255,255,255,.7)}
+.backgroundError{color:#fff;font-weight:800}
+
+@media(max-width:520px){
+  .gameBackground{background-position:center top}
+  .appFrame.hasBackground::before{
+    background:linear-gradient(180deg,rgba(7,9,14,.14),rgba(7,9,14,.07) 26%,rgba(7,9,14,.18))
+  }
+  .appFrame.hasBackground .card,
+  .appFrame.hasBackground .progressCard,
+  .appFrame.hasBackground .score,
+  .appFrame.hasBackground .vacationTile{
+    background:color-mix(in srgb,var(--card) 16%,transparent);
+    backdrop-filter:blur(6px) saturate(1.03);
+    -webkit-backdrop-filter:blur(6px) saturate(1.03)
+  }
+  .appFrame.hasBackground .goalCard{
+    background:color-mix(in srgb,var(--card2) 24%,transparent);
+    backdrop-filter:blur(12px) saturate(1.04);
+    -webkit-backdrop-filter:blur(12px) saturate(1.04)
+  }
+  .appFrame.hasBackground .add,
+  .appFrame.hasBackground .miniAdd,
+  .appFrame.hasBackground .goalActions button,
+  .appFrame.hasBackground .day:not(.complete),
+  .appFrame.hasBackground .repeatMark{
+    background:color-mix(in srgb,var(--soft) 20%,transparent)
+  }
+  .backgroundThemeGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .backgroundTheme{min-height:78px}
+}
