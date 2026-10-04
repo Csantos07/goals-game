@@ -8,6 +8,12 @@ type GoalType = "oneTime" | "daily";
 type DayKey = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 type ThemeMode = "dark" | "light";
 
+type BackgroundTheme = {
+  id: string;
+  name: string;
+  dataUrl: string;
+};
+
 type Goal = {
   id: number;
   player: Player;
@@ -24,6 +30,9 @@ const DAILY_POINTS = 10;
 const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
 const STORAGE_KEY = "goals-game:v1";
 const SUNDAY_CELEBRATION_KEY = "goals-game:last-sunday-celebration";
+const BACKGROUND_STORAGE_KEY = "goals-game:backgrounds:v1";
+const SELECTED_BACKGROUND_KEY = "goals-game:selected-background:v1";
+const MAX_BACKGROUND_THEMES = 4;
 
 const initialGoals: Goal[] = [
   { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
@@ -92,6 +101,41 @@ function contrastText(hex: string) {
   return luminance > 0.62 ? "#10120c" : "#ffffff";
 }
 
+function compressBackground(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onerror = () => reject(new Error("Could not read that image."));
+    reader.onload = () => {
+      const image = new Image();
+
+      image.onerror = () => reject(new Error("That image format could not be loaded."));
+      image.onload = () => {
+        const maxDimension = 1600;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("Could not prepare that background."));
+          return;
+        }
+
+        context.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+
+      image.src = String(reader.result);
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function GameBoard() {
   const [goals, setGoals] = useState(initialGoals);
   const [active, setActive] = useState<Player>("Carlo");
@@ -108,7 +152,11 @@ export default function GameBoard() {
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
   const [vacationBalance, setVacationBalance] = useState(350);
+  const [backgrounds, setBackgrounds] = useState<BackgroundTheme[]>([]);
+  const [selectedBackgroundId, setSelectedBackgroundId] = useState<string | null>(null);
+  const [backgroundError, setBackgroundError] = useState("");
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
+  const [hasLoadedBackgrounds, setHasLoadedBackgrounds] = useState(false);
 
   useEffect(() => {
     try {
@@ -142,6 +190,24 @@ export default function GameBoard() {
   }, []);
 
   useEffect(() => {
+    try {
+      const savedBackgrounds = window.localStorage.getItem(BACKGROUND_STORAGE_KEY);
+      const selectedBackground = window.localStorage.getItem(SELECTED_BACKGROUND_KEY);
+
+      if (savedBackgrounds) {
+        const parsed = JSON.parse(savedBackgrounds) as BackgroundTheme[];
+        if (Array.isArray(parsed)) setBackgrounds(parsed);
+      }
+
+      if (selectedBackground) setSelectedBackgroundId(selectedBackground);
+    } catch (error) {
+      console.warn("Could not load saved background themes.", error);
+    } finally {
+      setHasLoadedBackgrounds(true);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!hasLoadedSavedState) return;
 
     try {
@@ -153,6 +219,23 @@ export default function GameBoard() {
       console.warn("Could not save Goals Game data.", error);
     }
   }, [goals, active, themeMode, accent, vacationBalance, hasLoadedSavedState]);
+
+  useEffect(() => {
+    if (!hasLoadedBackgrounds) return;
+
+    try {
+      window.localStorage.setItem(BACKGROUND_STORAGE_KEY, JSON.stringify(backgrounds));
+
+      if (selectedBackgroundId) {
+        window.localStorage.setItem(SELECTED_BACKGROUND_KEY, selectedBackgroundId);
+      } else {
+        window.localStorage.removeItem(SELECTED_BACKGROUND_KEY);
+      }
+    } catch (error) {
+      console.warn("Could not save background themes.", error);
+      setBackgroundError("That image collection is too large for this browser. Remove a background and try again.");
+    }
+  }, [backgrounds, selectedBackgroundId, hasLoadedBackgrounds]);
 
 
   useEffect(() => {
@@ -273,7 +356,47 @@ export default function GameBoard() {
     setGoals(gs => gs.filter(g => g.id !== goal.id));
   }
 
-  const activeGoals = goals.filter(g => g.player === active);
+  async function uploadBackground(file?: File) {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setBackgroundError("Choose an image file.");
+      return;
+    }
+
+    if (backgrounds.length >= MAX_BACKGROUND_THEMES) {
+      setBackgroundError(`You can keep up to ${MAX_BACKGROUND_THEMES} custom backgrounds right now.`);
+      return;
+    }
+
+    setBackgroundError("");
+
+    try {
+      const dataUrl = await compressBackground(file);
+      const nextBackground: BackgroundTheme = {
+        id: `background-${Date.now()}`,
+        name: file.name.replace(/\.[^.]+$/, "") || "Custom background",
+        dataUrl
+      };
+
+      setBackgrounds(current => [...current, nextBackground]);
+      setSelectedBackgroundId(nextBackground.id);
+    } catch (error) {
+      console.warn("Could not upload background.", error);
+      setBackgroundError(error instanceof Error ? error.message : "Could not upload that background.");
+    }
+  }
+
+  function removeSelectedBackground() {
+    if (!selectedBackgroundId) return;
+    setBackgrounds(current => current.filter(background => background.id !== selectedBackgroundId));
+    setSelectedBackgroundId(null);
+    setBackgroundError("");
+  }
+
+  const selectedBackground = backgrounds.find(background => background.id === selectedBackgroundId) ?? null;
+
+    const activeGoals = goals.filter(g => g.player === active);
   const selfGoals = activeGoals.filter(g => g.assignedBy === "self");
   const partnerGoals = activeGoals.filter(g => g.assignedBy === "partner");
 
@@ -293,7 +416,14 @@ export default function GameBoard() {
   const progress = activePossible ? activeEarned / activePossible * 100 : 0;
 
   return (
-    <div className="appFrame" data-theme={themeMode} style={themeStyle}>
+    <div className={`appFrame ${selectedBackground ? "hasBackground" : ""}`} data-theme={themeMode} style={themeStyle}>
+      {selectedBackground && (
+        <div
+          className="gameBackground"
+          style={{ backgroundImage: `url(${selectedBackground.dataUrl})` }}
+          aria-hidden="true"
+        />
+      )}
       <main className="shell">
         <button
           className={`menuButton menuOverlay ${menuButtonVisible ? "visible" : "hidden"} ${showMenu ? "open" : ""}`}
@@ -340,6 +470,63 @@ export default function GameBoard() {
                   <input type="color" value={accent} onChange={e => setAccent(e.target.value)} />
                   <span>Custom</span>
                 </label>
+              </div>
+
+              <div className="backgroundSettings">
+                <div className="backgroundSettingsHead">
+                  <div>
+                    <span>Backgrounds</span>
+                    <small>Choose one like a theme</small>
+                  </div>
+                  <small>{backgrounds.length}/{MAX_BACKGROUND_THEMES}</small>
+                </div>
+
+                <div className="backgroundThemeGrid">
+                  <button
+                    className={`backgroundTheme defaultBackground ${selectedBackgroundId === null ? "selected" : ""}`}
+                    onClick={() => { setSelectedBackgroundId(null); setBackgroundError(""); }}
+                    aria-pressed={selectedBackgroundId === null}
+                  >
+                    <span>Default</span>
+                  </button>
+
+                  {backgrounds.map(background => (
+                    <button
+                      key={background.id}
+                      className={`backgroundTheme ${selectedBackgroundId === background.id ? "selected" : ""}`}
+                      style={{ backgroundImage: `url(${background.dataUrl})` }}
+                      onClick={() => { setSelectedBackgroundId(background.id); setBackgroundError(""); }}
+                      aria-pressed={selectedBackgroundId === background.id}
+                      title={background.name}
+                    >
+                      <span>{background.name}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="backgroundActions">
+                  <label className={`backgroundUpload ${backgrounds.length >= MAX_BACKGROUND_THEMES ? "disabled" : ""}`}>
+                    ＋ Upload background
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={backgrounds.length >= MAX_BACKGROUND_THEMES}
+                      onChange={event => {
+                        void uploadBackground(event.target.files?.[0]);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+
+                  {selectedBackground && (
+                    <button className="backgroundRemove" onClick={removeSelectedBackground}>
+                      Remove selected
+                    </button>
+                  )}
+                </div>
+
+                <p className="backgroundHint">Images automatically crop to fill the screen on desktop and mobile.</p>
+                {backgroundError && <p className="backgroundError" role="alert">{backgroundError}</p>}
               </div>
             </div>
           )}
