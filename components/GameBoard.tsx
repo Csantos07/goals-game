@@ -24,6 +24,7 @@ const DAILY_POINTS = 10;
 const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
 const STORAGE_KEY = "goals-game:v1";
 const SUNDAY_CELEBRATION_KEY = "goals-game:last-sunday-celebration";
+const TEST_SUNDAY_PREVIEW_KEY = "goals-game:test-sunday-next-load";
 
 const initialGoals: Goal[] = [
   { id: 1, player: "Carlo", title: "Monday morning gym", assignedBy: "self", type: "oneTime", done: false, dailyDone: [] },
@@ -177,9 +178,19 @@ export default function GameBoard() {
   const weekKey = getWeekKey();
 
   useEffect(() => {
-    if (!hasLoadedSavedState || !isSunday) return;
+    if (!hasLoadedSavedState) return;
 
     try {
+      const forceSundayTest = window.localStorage.getItem(TEST_SUNDAY_PREVIEW_KEY) === "1";
+
+      if (forceSundayTest) {
+        setShowWeekResult(true);
+        window.localStorage.removeItem(TEST_SUNDAY_PREVIEW_KEY);
+        return;
+      }
+
+      if (!isSunday) return;
+
       const lastCelebratedWeek = window.localStorage.getItem(SUNDAY_CELEBRATION_KEY);
       if (lastCelebratedWeek !== weekKey) {
         setShowWeekResult(true);
@@ -187,7 +198,7 @@ export default function GameBoard() {
       }
     } catch (error) {
       console.warn("Could not track Sunday celebration state.", error);
-      setShowWeekResult(true);
+      if (isSunday) setShowWeekResult(true);
     }
   }, [hasLoadedSavedState, isSunday, weekKey]);
   const accentContrast = contrastText(accent);
@@ -293,6 +304,7 @@ export default function GameBoard() {
         })
       );
       window.localStorage.removeItem(SUNDAY_CELEBRATION_KEY);
+      window.localStorage.setItem(TEST_SUNDAY_PREVIEW_KEY, "1");
     } catch (error) {
       console.warn("Could not reset Goals Game test seed.", error);
     }
@@ -346,7 +358,7 @@ export default function GameBoard() {
 
           <div className="fullScreenMenuUtility">
             <span>TESTING</span>
-            <button onClick={resetToTestSeed}>↺ Reset to test seed</button>
+            <button onClick={resetToTestSeed}>↺ Reset + arm Sunday test</button>
           </div>
 
           {showSettings && (
@@ -378,12 +390,12 @@ export default function GameBoard() {
         {showWeekResult && (
           <section className="weekResultOverlay" role="dialog" aria-modal="true" aria-labelledby="week-result-title">
             <div className="confettiBurst" aria-hidden="true">
-              {Array.from({ length: 90 }, (_, index) => (
+              {Array.from({ length: 120 }, (_, index) => (
                 <span
                   key={index}
                   style={{
                     "--x": `${(index * 37) % 100}%`,
-                    "--delay": `${(index % 15) * 42}ms`,
+                    "--delay": `${(index % 20) * 80}ms`,
                     "--drift": `${((index % 9) - 4) * 18}px`,
                     "--spin": `${180 + (index % 11) * 34}deg`
                   } as CSSProperties}
