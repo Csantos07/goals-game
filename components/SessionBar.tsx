@@ -17,6 +17,7 @@ export default function SessionBar({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   async function signOut() {
     setBusy(true);
@@ -25,18 +26,43 @@ export default function SessionBar({
     router.refresh();
   }
 
+  async function copyInviteCode() {
+    if (!inviteCode || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(inviteCode);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
   return (
-    <div className="sessionBar">
-      <div>
-        <strong>{displayName}</strong>
-        <span>{groupName} · {memberCount} player{memberCount === 1 ? "" : "s"}</span>
+    <section className="accountSettings">
+      <div className="accountSettingsHead">
+        <div>
+          <span>Account & group</span>
+          <small>Signed in as {displayName}</small>
+        </div>
+        <small>{memberCount} player{memberCount === 1 ? "" : "s"}</small>
       </div>
-      <div className="sessionBarActions">
-        {inviteCode && <code title="Group invite code">{inviteCode}</code>}
-        <button onClick={signOut} disabled={busy}>
-          {busy ? "Logging out…" : "Log out"}
-        </button>
+
+      <div className="accountGroupCard">
+        <div>
+          <small>GROUP</small>
+          <strong>{groupName}</strong>
+        </div>
+
+        {inviteCode && (
+          <button className="inviteCodeButton" onClick={copyInviteCode} type="button">
+            <span>
+              <small>INVITE CODE</small>
+              <code>{inviteCode}</code>
+            </span>
+            <b>{copied ? "Copied" : "Copy"}</b>
+          </button>
+        )}
       </div>
-    </div>
+
+      <button className="logoutButton" onClick={signOut} disabled={busy} type="button">
+        {busy ? "Logging out…" : "Log out"}
+      </button>
+    </section>
   );
 }
