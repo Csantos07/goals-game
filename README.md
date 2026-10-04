@@ -395,6 +395,29 @@ Planned work:
 11. persist reward/envelope transactions
 12. eventually move custom backgrounds to Supabase Storage
 
+## v0.11 — Shared persistent gameplay
+
+**Branch:** \`feature/shared-gameplay-persistence\`
+
+Moves the remaining meaningful game state out of browser-only storage and into Supabase.
+
+Added:
+
+- shared weekly goals in Postgres
+- shared one-time completions
+- date-based daily completions
+- realtime score/game refresh between signed-in players
+- dynamic group-member scoreboards instead of a two-player-only data model
+- shared Vacation envelope balance
+- per-user theme and accent preferences
+- per-user active-player preference
+- per-user Sunday celebration state
+- account-synced custom backgrounds
+- automatic one-time import of legacy browser-local goals/settings when possible
+- RLS policies for preferences, backgrounds, and envelopes
+
+Custom background images are currently stored as compressed data URLs in an RLS-protected user table. This keeps them synced securely with the user's account without directly mutating Supabase Storage metadata. A future optimization can move the binary image payloads to a private Storage bucket while keeping the same UI.
+
 ## Known limitations
 
 - visible goal/checkoff gameplay is still localStorage-backed
