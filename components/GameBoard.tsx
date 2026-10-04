@@ -107,7 +107,13 @@ export default function GameBoard() {
           vacationBalance?: number;
         };
 
-        if (Array.isArray(parsed.goals)) setGoals(parsed.goals);
+        if (Array.isArray(parsed.goals)) {
+          setGoals(parsed.goals.map(goal =>
+            goal.id === 4 && goal.title === "Close-out routine at work"
+              ? { ...goal, title: "Do something for Nico before work" }
+              : goal
+          ));
+        }
         if (parsed.active === "Carlo" || parsed.active === "Lindsey") setActive(parsed.active);
         if (parsed.themeMode === "dark" || parsed.themeMode === "light") setThemeMode(parsed.themeMode);
         if (typeof parsed.accent === "string") setAccent(parsed.accent);
