@@ -25,13 +25,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .fullScreenNav button{border:0;background:transparent;color:#fff;padding:0;font-size:clamp(38px,11vw,74px);font-weight:700;letter-spacing:-.055em;line-height:.94;cursor:pointer;text-align:left}
 .fullScreenNav button:hover{opacity:.72}
 .fullScreenSettings{width:min(720px,100%);margin:-150px auto 0;padding:0 24px 50px;display:grid;gap:20px}
-.wordSwitch{display:flex;gap:20px}
-.wordSwitch button{border:0!important;background:transparent!important;color:#fff!important;padding:0!important;font-size:18px}
-.wordSwitch .selected{text-decoration:underline;text-underline-offset:6px}
+.wordSwitch{display:flex;gap:10px}
+.wordSwitch button{border:0!important;background:rgba(255,255,255,.08)!important;color:#fff!important;padding:10px 14px!important;border-radius:12px;font-size:18px}
+.wordSwitch .selected{background:var(--accent)!important;color:var(--accent-contrast)!important;text-decoration:none}
 .fullScreenSettings .customColor{color:#fff}
 .modeSwitch,.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .modeSwitch button,.seg button{padding:11px 12px;border-radius:12px;border:1px solid var(--buttonLine);background:var(--soft);color:var(--text);cursor:pointer}
-.modeSwitch .selected,.seg .selected{border-color:var(--accent);color:var(--accent)}
+.modeSwitch .selected,.seg .selected{border-color:transparent;background:var(--accent);color:var(--accent-contrast)}
 .swatches{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .swatch{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}
 .swatch.selected{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .customColor input{width:38px;height:34px;border:0;background:transparent;padding:0;cursor:pointer}
 .scoreboard{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;margin-bottom:18px}
 .score{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:20px;padding:14px;text-align:left;display:flex;gap:10px;align-items:center;cursor:pointer}
-.score.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.score.active{border-color:transparent;background:color-mix(in srgb,var(--accent) 24%,var(--card));box-shadow:none}
 .avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-contrast);display:grid;place-items:center;font-weight:900}
 .score small,.score em{display:block;color:var(--muted);font-style:normal}
 .score strong{font-size:30px;line-height:1;margin-right:4px}
