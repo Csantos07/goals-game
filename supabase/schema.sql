@@ -239,16 +239,12 @@ grant select, insert, update on public.weeks to authenticated;
 grant select, insert, update, delete on public.goals to authenticated;
 grant select, insert, delete on public.goal_completions to authenticated;
 
-create policy "users can view their profile"
-on public.profiles for select
-to authenticated
-using (id = (select auth.uid()));
-
-create policy "group members can view one another"
+create policy "users can view self and group members"
 on public.profiles for select
 to authenticated
 using (
-  exists (
+  id = (select auth.uid())
+  or exists (
     select 1
     from public.group_members mine
     join public.group_members theirs on theirs.group_id = mine.group_id
@@ -398,3 +394,109 @@ using (
       and private.is_group_member(w.group_id)
   )
 );
+
+
+-- Persistent user settings, backgrounds, and shared envelopes.
+create table public.user_backgrounds (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  name text not null,
+  data_url text not null,
+  created_at timestamptz not null default now()
+);
+
+create table public.user_preferences (
+  profile_id uuid primary key references public.profiles(id) on delete cascade,
+  theme_mode text not null default 'dark' check (theme_mode in ('dark','light')),
+  accent text not null default '#c9ff54',
+  active_profile_id uuid references public.profiles(id) on delete set null,
+  selected_background_id uuid references public.user_backgrounds(id) on delete set null,
+  last_celebrated_week date,
+  updated_at timestamptz not null default now()
+);
+
+create table public.envelopes (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid not null references public.groups(id) on delete cascade,
+  name text not null,
+  balance_cents bigint not null default 0 check (balance_cents >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (group_id, name)
+);
+
+create index user_backgrounds_profile_id_idx on public.user_backgrounds(profile_id);
+create index user_preferences_active_profile_id_idx on public.user_preferences(active_profile_id);
+create index user_preferences_selected_background_id_idx on public.user_preferences(selected_background_id);
+create index envelopes_group_id_idx on public.envelopes(group_id);
+
+alter table public.user_backgrounds enable row level security;
+alter table public.user_preferences enable row level security;
+alter table public.envelopes enable row level security;
+
+grant select, insert, update, delete on public.user_backgrounds to authenticated;
+grant select, insert, update on public.user_preferences to authenticated;
+grant select, insert, update, delete on public.envelopes to authenticated;
+
+create policy "users can view their backgrounds"
+on public.user_backgrounds for select
+to authenticated
+using (profile_id = (select auth.uid()));
+
+create policy "users can create their backgrounds"
+on public.user_backgrounds for insert
+to authenticated
+with check (profile_id = (select auth.uid()));
+
+create policy "users can update their backgrounds"
+on public.user_backgrounds for update
+to authenticated
+using (profile_id = (select auth.uid()))
+with check (profile_id = (select auth.uid()));
+
+create policy "users can delete their backgrounds"
+on public.user_backgrounds for delete
+to authenticated
+using (profile_id = (select auth.uid()));
+
+create policy "users can view their preferences"
+on public.user_preferences for select
+to authenticated
+using (profile_id = (select auth.uid()));
+
+create policy "users can create their preferences"
+on public.user_preferences for insert
+to authenticated
+with check (profile_id = (select auth.uid()));
+
+create policy "users can update their preferences"
+on public.user_preferences for update
+to authenticated
+using (profile_id = (select auth.uid()))
+with check (profile_id = (select auth.uid()));
+
+create policy "members can view envelopes"
+on public.envelopes for select
+to authenticated
+using (private.is_group_member(group_id));
+
+create policy "members can create envelopes"
+on public.envelopes for insert
+to authenticated
+with check (private.is_group_member(group_id));
+
+create policy "members can update envelopes"
+on public.envelopes for update
+to authenticated
+using (private.is_group_member(group_id))
+with check (private.is_group_member(group_id));
+
+create policy "members can delete envelopes"
+on public.envelopes for delete
+to authenticated
+using (private.is_group_member(group_id));
+
+alter publication supabase_realtime add table public.goals;
+alter publication supabase_realtime add table public.goal_completions;
+alter publication supabase_realtime add table public.envelopes;
+alter publication supabase_realtime add table public.user_preferences;
