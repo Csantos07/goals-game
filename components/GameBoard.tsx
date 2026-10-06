@@ -419,31 +419,36 @@ export default function GameBoard({
           .maybeSingle()
       ]);
 
-      let backgroundResult = await supabase
+      let backgroundRows: Array<{ id: string; name: string; data_url: string; is_private?: boolean }> = [];
+      const privateBackgroundResult = await supabase
         .from("user_backgrounds")
         .select("id, name, data_url, is_private, created_at")
         .eq("profile_id", currentUserId)
         .eq("is_private", false)
         .order("created_at", { ascending: true });
 
-      const privateFlagMissing = backgroundResult.error?.code === "42703" ||
-        backgroundResult.error?.code === "PGRST204" ||
-        backgroundResult.error?.message.toLowerCase().includes("is_private");
-      if (backgroundResult.error && privateFlagMissing) {
+      const privateFlagMissing = privateBackgroundResult.error?.code === "42703" ||
+        privateBackgroundResult.error?.code === "PGRST204" ||
+        privateBackgroundResult.error?.message.toLowerCase().includes("is_private");
+      if (privateBackgroundResult.error && privateFlagMissing) {
         // Keep existing deployments usable until the additive SQL upgrade is applied.
         setPrivateThemesSchemaReady(false);
-        backgroundResult = await supabase
+        const legacyBackgroundResult = await supabase
           .from("user_backgrounds")
           .select("id, name, data_url, created_at")
           .eq("profile_id", currentUserId)
           .order("created_at", { ascending: true });
+        if (legacyBackgroundResult.error) throw legacyBackgroundResult.error;
+        backgroundRows = legacyBackgroundResult.data ?? [];
+      } else if (privateBackgroundResult.error) {
+        throw privateBackgroundResult.error;
       } else {
-        setPrivateThemesSchemaReady(!backgroundResult.error);
+        setPrivateThemesSchemaReady(true);
+        backgroundRows = privateBackgroundResult.data ?? [];
       }
 
       if (goalResult.error) throw goalResult.error;
       if (preferenceResult.error) throw preferenceResult.error;
-      if (backgroundResult.error) throw backgroundResult.error;
       if (envelopeResult.error) throw envelopeResult.error;
 
       if (allowMigration && !migrationAttempted.current) {
@@ -452,7 +457,7 @@ export default function GameBoard({
           week.id,
           goalResult.data ?? [],
           Boolean(preferenceResult.data),
-          backgroundResult.data?.length ?? 0,
+          backgroundRows.length,
           Boolean(envelopeResult.data)
         );
         if (didMigrate) {
@@ -507,7 +512,7 @@ export default function GameBoard({
         setActiveProfileId(currentUserId);
       }
 
-      setBackgrounds((backgroundResult.data ?? []).map(row => ({
+      setBackgrounds(backgroundRows.map(row => ({
         id: row.id,
         name: row.name,
         dataUrl: row.data_url,
@@ -834,25 +839,30 @@ export default function GameBoard({
       if (isPrivate && !privateThemesSchemaReady) {
         throw new Error("Run the private themes SQL upgrade before adding private photos.");
       }
-      const { data, error } = await supabase
-        .from("user_backgrounds")
-        .insert({
-          profile_id: currentUserId,
-          name: file.name.replace(/\.[^.]+$/, "") || "Custom background",
-          data_url: dataUrl,
-          ...(privateThemesSchemaReady ? { is_private: isPrivate } : {})
-        })
-        .select(privateThemesSchemaReady ? "id, name, data_url, is_private" : "id, name, data_url")
-        .single();
-
-      if (error) throw error;
-
-      const nextBackground = {
-        id: data.id,
-        name: data.name,
-        dataUrl: data.data_url,
-        isPrivate: privateThemesSchemaReady && Boolean(data.is_private)
-      };
+      const name = file.name.replace(/\.[^.]+$/, "") || "Custom background";
+      let nextBackground: BackgroundTheme;
+      if (privateThemesSchemaReady) {
+        const { data, error } = await supabase
+          .from("user_backgrounds")
+          .insert({ profile_id: currentUserId, name, data_url: dataUrl, is_private: isPrivate })
+          .select("id, name, data_url, is_private")
+          .single();
+        if (error) throw error;
+        nextBackground = {
+          id: data.id,
+          name: data.name,
+          dataUrl: data.data_url,
+          isPrivate: Boolean(data.is_private)
+        };
+      } else {
+        const { data, error } = await supabase
+          .from("user_backgrounds")
+          .insert({ profile_id: currentUserId, name, data_url: dataUrl })
+          .select("id, name, data_url")
+          .single();
+        if (error) throw error;
+        nextBackground = { id: data.id, name: data.name, dataUrl: data.data_url, isPrivate: false };
+      }
 
       if (nextBackground.isPrivate) {
         setPrivateBackgrounds(current => [...current, nextBackground]);
