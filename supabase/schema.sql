@@ -402,6 +402,7 @@ create table public.user_backgrounds (
   profile_id uuid not null references public.profiles(id) on delete cascade,
   name text not null,
   data_url text not null,
+  is_private boolean not null default false,
   created_at timestamptz not null default now()
 );
 
