@@ -205,6 +205,7 @@ export default function GameBoard({
   const [privateBackgrounds, setPrivateBackgrounds] = useState<BackgroundTheme[]>([]);
   const [privateThemesUnlocked, setPrivateThemesUnlocked] = useState(false);
   const [unlockingPrivateThemes, setUnlockingPrivateThemes] = useState(false);
+  const [privateThemesSchemaReady, setPrivateThemesSchemaReady] = useState(true);
   const [selectedBackgroundId, setSelectedBackgroundId] = useState<string | null>(null);
   const [lastCelebratedWeek, setLastCelebratedWeek] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState("");
@@ -399,7 +400,7 @@ export default function GameBoard({
 
       setWeekId(week.id);
 
-      const [goalResult, preferenceResult, backgroundResult, envelopeResult] = await Promise.all([
+      const [goalResult, preferenceResult, envelopeResult] = await Promise.all([
         supabase
           .from("goals")
           .select("id, player_id, assigned_by, title, goal_type, points, completed_at, created_at")
@@ -411,18 +412,34 @@ export default function GameBoard({
           .eq("profile_id", currentUserId)
           .maybeSingle(),
         supabase
-          .from("user_backgrounds")
-          .select("id, name, data_url, is_private, created_at")
-          .eq("profile_id", currentUserId)
-          .eq("is_private", false)
-          .order("created_at", { ascending: true }),
-        supabase
           .from("envelopes")
           .select("id, balance_cents")
           .eq("group_id", groupId)
           .eq("name", "Vacation")
           .maybeSingle()
       ]);
+
+      let backgroundResult = await supabase
+        .from("user_backgrounds")
+        .select("id, name, data_url, is_private, created_at")
+        .eq("profile_id", currentUserId)
+        .eq("is_private", false)
+        .order("created_at", { ascending: true });
+
+      const privateFlagMissing = backgroundResult.error?.code === "42703" ||
+        backgroundResult.error?.code === "PGRST204" ||
+        backgroundResult.error?.message.toLowerCase().includes("is_private");
+      if (backgroundResult.error && privateFlagMissing) {
+        // Keep existing deployments usable until the additive SQL upgrade is applied.
+        setPrivateThemesSchemaReady(false);
+        backgroundResult = await supabase
+          .from("user_backgrounds")
+          .select("id, name, data_url, created_at")
+          .eq("profile_id", currentUserId)
+          .order("created_at", { ascending: true });
+      } else {
+        setPrivateThemesSchemaReady(!backgroundResult.error);
+      }
 
       if (goalResult.error) throw goalResult.error;
       if (preferenceResult.error) throw preferenceResult.error;
@@ -814,15 +831,18 @@ export default function GameBoard({
 
     try {
       const dataUrl = await compressBackground(file);
+      if (isPrivate && !privateThemesSchemaReady) {
+        throw new Error("Run the private themes SQL upgrade before adding private photos.");
+      }
       const { data, error } = await supabase
         .from("user_backgrounds")
         .insert({
           profile_id: currentUserId,
           name: file.name.replace(/\.[^.]+$/, "") || "Custom background",
           data_url: dataUrl,
-          is_private: isPrivate
+          ...(privateThemesSchemaReady ? { is_private: isPrivate } : {})
         })
-        .select("id, name, data_url, is_private")
+        .select(privateThemesSchemaReady ? "id, name, data_url, is_private" : "id, name, data_url")
         .single();
 
       if (error) throw error;
@@ -831,7 +851,7 @@ export default function GameBoard({
         id: data.id,
         name: data.name,
         dataUrl: data.data_url,
-        isPrivate: Boolean(data.is_private)
+        isPrivate: privateThemesSchemaReady && Boolean(data.is_private)
       };
 
       if (nextBackground.isPrivate) {
@@ -873,6 +893,10 @@ export default function GameBoard({
   }
 
   async function unlockPrivateThemes() {
+    if (!privateThemesSchemaReady) {
+      setBackgroundError("Run the private themes SQL upgrade before opening this area.");
+      return;
+    }
     setUnlockingPrivateThemes(true);
     setBackgroundError("");
     try {
@@ -1094,15 +1118,20 @@ export default function GameBoard({
                     onClick={() => privateThemesUnlocked
                       ? lockPrivateThemes()
                       : void unlockPrivateThemes()}
-                    disabled={unlockingPrivateThemes}
+                    disabled={unlockingPrivateThemes || !privateThemesSchemaReady}
                     aria-expanded={privateThemesUnlocked}
                   >
                     {unlockingPrivateThemes
                       ? "Opening private themes…"
-                      : privateThemesUnlocked ? "Lock private themes" : "Open private themes"}
+                      : privateThemesUnlocked
+                        ? "Lock private themes"
+                        : privateThemesSchemaReady ? "Open private themes" : "Private themes need setup"}
                   </button>
-                  {!privateThemesUnlocked && (
+                  {!privateThemesUnlocked && privateThemesSchemaReady && (
                     <small>Private photos load only when you open this area.</small>
+                  )}
+                  {!privateThemesSchemaReady && (
+                    <small>Run the SQL upgrade included with this branch to enable private themes.</small>
                   )}
                 </div>
 
