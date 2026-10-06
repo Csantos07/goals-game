@@ -409,6 +409,7 @@ export default function GameBoard({
           .from("user_backgrounds")
           .select("id, name, data_url, created_at")
           .eq("profile_id", currentUserId)
+          .eq("is_private", false)
           .order("created_at", { ascending: true }),
         supabase
           .from("envelopes")
