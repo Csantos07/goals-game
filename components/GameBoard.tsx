@@ -522,10 +522,9 @@ export default function GameBoard({
   }, [loadData]);
 
   useEffect(() => {
-    if (showSettings) return;
-    setPrivateThemesUnlocked(false);
-    setPrivateBackgrounds([]);
-  }, [showSettings]);
+    if (showSettings && showMenu) return;
+    lockPrivateThemes();
+  }, [showMenu, showSettings]);
 
   useEffect(() => {
     const lockPrivateThemes = () => {
