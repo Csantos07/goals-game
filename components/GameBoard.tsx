@@ -53,6 +53,8 @@ const LEGACY_SELECTED_BACKGROUND_KEY = "goals-game:selected-background:v1";
 const MIGRATION_KEY = "goals-game:supabase-migrated:v1";
 const MAX_BACKGROUND_THEMES = 4;
 const MAX_PRIVATE_BACKGROUND_THEMES = 8;
+const PRIVATE_THEMES_EMAIL = "rcarlosantos89@gmail.com";
+const PRIVATE_THEMES_HOLD_MS = 3000;
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
@@ -183,6 +185,7 @@ export default function GameBoard({
   const today = getCurrentDayKey();
   const isSunday = new Date().getDay() === 0;
   const migrationAttempted = useRef(false);
+  const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [weekId, setWeekId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -903,17 +906,16 @@ export default function GameBoard({
   }
 
   async function unlockPrivateThemes() {
-    if (!privateThemesSchemaReady) {
-      setBackgroundError("Run the private themes SQL upgrade before opening this area.");
-      return;
-    }
+    if (!privateThemesSchemaReady) return;
     setUnlockingPrivateThemes(true);
     setBackgroundError("");
     try {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
-      if (!authData.user || authData.user.id !== currentUserId) {
-        throw new Error("Sign in to your own account to open private themes.");
+      const email = authData.user?.email?.trim().toLowerCase();
+      if (!authData.user || authData.user.id !== currentUserId || email !== PRIVATE_THEMES_EMAIL) {
+        lockPrivateThemes();
+        return;
       }
 
       const { data, error } = await supabase
@@ -942,6 +944,21 @@ export default function GameBoard({
   function lockPrivateThemes() {
     setPrivateThemesUnlocked(false);
     setPrivateBackgrounds([]);
+  }
+
+  function startPrivateThemesHold() {
+    if (privateThemesUnlocked || unlockingPrivateThemes || !privateThemesSchemaReady) return;
+    if (privateThemesHoldTimer.current) clearTimeout(privateThemesHoldTimer.current);
+    privateThemesHoldTimer.current = setTimeout(() => {
+      privateThemesHoldTimer.current = null;
+      void unlockPrivateThemes();
+    }, PRIVATE_THEMES_HOLD_MS);
+  }
+
+  function cancelPrivateThemesHold() {
+    if (!privateThemesHoldTimer.current) return;
+    clearTimeout(privateThemesHoldTimer.current);
+    privateThemesHoldTimer.current = null;
   }
 
   const selectedBackground = [...backgrounds, ...privateBackgrounds]
@@ -1059,7 +1076,13 @@ export default function GameBoard({
               </div>
 
               <div className="backgroundSettings">
-                <div className="backgroundSettingsHead">
+                <div
+                  className="backgroundSettingsHead"
+                  onPointerDown={startPrivateThemesHold}
+                  onPointerUp={cancelPrivateThemesHold}
+                  onPointerCancel={cancelPrivateThemesHold}
+                  onPointerLeave={cancelPrivateThemesHold}
+                >
                   <div>
                     <span>Backgrounds</span>
                     <small>Saved to your account</small>
@@ -1121,36 +1144,13 @@ export default function GameBoard({
 
                 <p className="backgroundHint">Your theme now follows your login across browsers and devices.</p>
 
-                <div className="privateThemesAccess">
-                  <button
-                    type="button"
-                    className="privateThemesToggle"
-                    onClick={() => privateThemesUnlocked
-                      ? lockPrivateThemes()
-                      : void unlockPrivateThemes()}
-                    disabled={unlockingPrivateThemes || !privateThemesSchemaReady}
-                    aria-expanded={privateThemesUnlocked}
-                  >
-                    {unlockingPrivateThemes
-                      ? "Opening private themes…"
-                      : privateThemesUnlocked
-                        ? "Lock private themes"
-                        : privateThemesSchemaReady ? "Open private themes" : "Private themes need setup"}
-                  </button>
-                  {!privateThemesUnlocked && privateThemesSchemaReady && (
-                    <small>Private photos load only when you open this area.</small>
-                  )}
-                  {!privateThemesSchemaReady && (
-                    <small>Run the SQL upgrade included with this branch to enable private themes.</small>
-                  )}
-                </div>
 
                 {privateThemesUnlocked && (
                   <div className="privateThemesPanel">
                     <div className="backgroundSettingsHead">
                       <div>
                         <span>Private themes</span>
-                        <small>Visible only in this signed-in account</small>
+                        <small>Private account themes</small>
                       </div>
                       <small>{privateBackgrounds.length}/{MAX_PRIVATE_BACKGROUND_THEMES}</small>
                     </div>
@@ -1178,6 +1178,8 @@ export default function GameBoard({
                     ) : (
                       <p className="backgroundHint">No private themes yet. Add a photo here to keep it out of the regular theme list.</p>
                     )}
+
+                    <button type="button" className="privateThemesToggle" onClick={lockPrivateThemes}>Lock private themes</button>
 
                     <label className={"backgroundUpload " + (privateBackgrounds.length >= MAX_PRIVATE_BACKGROUND_THEMES ? "disabled" : "")}>
                       ＋ Add private photo
