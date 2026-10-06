@@ -554,7 +554,11 @@ export default function GameBoard({
   useEffect(() => {
     const lockPrivateThemes = () => {
       setPrivateThemesUnlocked(false);
-      setPrivateBackgrounds([]);
+      setPrivateBackgrounds(current =>
+        selectedBackgroundId && current.some(background => background.id === selectedBackgroundId)
+          ? current.filter(background => background.id === selectedBackgroundId)
+          : []
+      );
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") lockPrivateThemes();
@@ -565,7 +569,7 @@ export default function GameBoard({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("pagehide", lockPrivateThemes);
     };
-  }, []);
+  }, [selectedBackgroundId]);
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -943,7 +947,11 @@ export default function GameBoard({
 
   function lockPrivateThemes() {
     setPrivateThemesUnlocked(false);
-    setPrivateBackgrounds([]);
+    setPrivateBackgrounds(current =>
+      selectedBackgroundId && current.some(background => background.id === selectedBackgroundId)
+        ? current.filter(background => background.id === selectedBackgroundId)
+        : []
+    );
   }
 
   function startPrivateThemesHold() {
