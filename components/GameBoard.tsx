@@ -207,6 +207,14 @@ export default function GameBoard({
   const [showSettings, setShowSettings] = useState(false);
   const [showEnvelopes, setShowEnvelopes] = useState(false);
   const [showWeekResult, setShowWeekResult] = useState(false);
+  const [potCents, setPotCents] = useState(0);
+  const [potInput, setPotInput] = useState("");
+  const [potError, setPotError] = useState("");
+  const [allocating, setAllocating] = useState(false);
+  const [allocatedCents, setAllocatedCents] = useState(0);
+  const [allocationNotice, setAllocationNotice] = useState("");
+  const [potReady, setPotReady] = useState(false);
+
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
   const [vacationBalance, setVacationBalance] = useState(DEMO_VACATION_BALANCE);
@@ -578,6 +586,77 @@ export default function GameBoard({
   useEffect(() => {
     void loadData(true);
   }, [loadData]);
+
+  const settlementWeekStart = addDays(weekStart, -7);
+  const settlementWeekId = useRef<string | null>(null);
+  const settlementWinnerId = useRef<string | null>(null);
+  const [settlementLeaders, setSettlementLeaders] = useState<Member[]>([]);
+  const [settlementScores, setSettlementScores] = useState<Map<string, number>>(new Map());
+
+  const loadSettlement = useCallback(async () => {
+    if (!isMonday) return;
+    const { data: previous, error: previousError } = await supabase.from("weeks")
+      .select("id").eq("group_id", groupId).eq("starts_on", settlementWeekStart).maybeSingle();
+    if (previousError || !previous) return;
+    settlementWeekId.current = previous.id;
+    const [goalResponse, contributionResponse, allocationResponse] = await Promise.all([
+      supabase.from("goals").select("id, player_id, goal_type, points, completed_at").eq("week_id", previous.id),
+      supabase.from("weekly_contributions").select("amount_cents").eq("week_id", previous.id),
+      supabase.from("weekly_allocations").select("profile_id, amount_cents").eq("week_id", previous.id)
+    ]);
+    if (goalResponse.error || contributionResponse.error || allocationResponse.error) {
+      setPotReady(false);
+      return;
+    }
+    const oldGoals = goalResponse.data ?? [];
+    const dailyIds = oldGoals.filter(g => g.goal_type === "daily").map(g => g.id);
+    const daily = dailyIds.length ? await supabase.from("goal_completions").select("goal_id").in("goal_id", dailyIds) : null;
+    if (daily?.error) return;
+    const counts = new Map<string, number>();
+    (daily?.data ?? []).forEach(item => counts.set(item.goal_id, (counts.get(item.goal_id) ?? 0) + 1));
+    const totals = new Map(members.map(member => [member.id, 0]));
+    oldGoals.forEach(g => totals.set(g.player_id, (totals.get(g.player_id) ?? 0) +
+      g.points * (g.goal_type === "daily" ? (counts.get(g.id) ?? 0) : (g.completed_at ? 1 : 0))));
+    const high = Math.max(...Array.from(totals.values()));
+    const leaders = members.filter(member => totals.get(member.id) === high);
+    setSettlementScores(totals);
+    setSettlementLeaders(leaders);
+    settlementWinnerId.current = leaders.length === 1 ? leaders[0].id : null;
+    setPotCents((contributionResponse.data ?? []).reduce((sum, row) => sum + row.amount_cents, 0));
+    setAllocatedCents((allocationResponse.data ?? []).filter(row => row.profile_id === currentUserId)
+      .reduce((sum, row) => sum + row.amount_cents, 0));
+    setPotReady(true);
+  }, [currentUserId, groupId, isMonday, members, settlementWeekStart, supabase]);
+
+  useEffect(() => { void loadSettlement(); }, [loadSettlement]);
+
+  async function contributeToPot() {
+    if (!weekId) return;
+    const cents = Math.round(Number(potInput) * 100);
+    if (!Number.isSafeInteger(cents) || cents <= 0) { setPotError("Enter a positive dollar amount."); return; }
+    setPotError("");
+    const { error } = await supabase.from("weekly_contributions").insert({
+      week_id: weekId, profile_id: currentUserId, amount_cents: cents
+    });
+    if (error) { setPotError("Could not save contribution. Check that the settlement SQL migration is installed."); return; }
+    setPotInput("");
+    setAllocationNotice("Contribution saved for this week.");
+  }
+
+  async function allocateWinnings() {
+    if (!settlementWeekId.current || allocating) return;
+    setAllocating(true);
+    setPotError("");
+    const { data, error } = await supabase.rpc("allocate_weekly_winnings", {
+      target_week_id: settlementWeekId.current, target_envelope_name: "Vacation"
+    });
+    if (error) setPotError(error.message);
+    else {
+      setAllocationNotice("$" + (Number(data) / 100).toFixed(2) + " allocated to Vacation.");
+      await loadSettlement();
+    }
+    setAllocating(false);
+  }
 
   useEffect(() => {
     if (showSettings && showMenu) return;
@@ -1360,7 +1439,22 @@ export default function GameBoard({
             <div className="weekResultContent">
               <p className="weekResultEyebrow">LAST WEEK&apos;S GAME IS CLOSED</p>
               <h2 id="week-result-title">{winner ? winner.displayName + " wins the week." : "This week ends in a tie."}</h2>
-              <p className="weekResultScoreLabel">FINAL SCORE</p>
+              <p className="weekResultScoreLabel">PREVIOUS WEEK'S FINAL SCORE</p>
+              {potReady && (
+                <div style={{ padding: 16, marginBottom: 16, border: "1px solid currentColor", borderRadius: 12 }}>
+                  <p>Weekly pot: <strong>${(potCents / 100).toFixed(2)}</strong></p>
+                  <p>{settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " won!" : "Tie — the pot is split evenly."}</p>
+                  {settlementLeaders.map(member => <p key={member.id}>{member.displayName}: {settlementScores.get(member.id) ?? 0} points</p>)}
+                  {settlementLeaders.some(member => member.id === currentUserId) && potCents > 0 && (
+                    <button className="weekResultContinue" disabled={allocating || allocatedCents > 0}
+                      onClick={() => void allocateWinnings()}>
+                      {allocatedCents > 0 ? "Your winnings are allocated" : allocating ? "Allocating…" : "Assign my winnings to Vacation"}
+                    </button>
+                  )}
+                  {allocationNotice && <p role="status">{allocationNotice}</p>}
+                  {potError && <p role="alert">{potError}</p>}
+                </div>
+              )}
               <div className="weekResultScore multiplayerResult">
                 {rankedMembers.map(member => (
                   <span key={member.id}>
@@ -1406,6 +1500,19 @@ export default function GameBoard({
           <span className="vacationTileArrow">›</span>
         </button>
 
+        <section className="card">
+          <div className="sectionHead"><div><p className="eyebrow">WEEKLY STAKE</p><h2>Build this week&apos;s pot.</h2></div></div>
+          <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+            <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
+              value={potInput} onChange={event => setPotInput(event.target.value)}
+              placeholder="Amount ($)" style={{ padding: 10, borderRadius: 8 }} />
+            <button className="add" onClick={() => void contributeToPot()}>Add to pot</button>
+          </div>
+          {potError && <p role="alert">{potError}</p>}
+          {allocationNotice && <p role="status">{allocationNotice}</p>}
+          <small>This tracks pledges in the game; it does not transfer money.</small>
+        </section>
         <section className="card">
           <div className="sectionHead">
             <div>
