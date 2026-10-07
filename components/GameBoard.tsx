@@ -50,6 +50,7 @@ const LEGACY_STORAGE_KEY = "goals-game:v1";
 const LEGACY_SUNDAY_KEY = "goals-game:last-sunday-celebration";
 const LEGACY_BACKGROUNDS_KEY = "goals-game:backgrounds:v1";
 const LEGACY_SELECTED_BACKGROUND_KEY = "goals-game:selected-background:v1";
+const LAST_PUBLIC_BACKGROUND_KEY = "goals-game:last-public-background:v1";
 const MIGRATION_KEY = "goals-game:supabase-migrated:v1";
 const MAX_BACKGROUND_THEMES = 4;
 const MAX_PRIVATE_BACKGROUND_THEMES = 8;
@@ -213,6 +214,7 @@ export default function GameBoard({
   const [unlockingPrivateThemes, setUnlockingPrivateThemes] = useState(false);
   const [privateThemesSchemaReady, setPrivateThemesSchemaReady] = useState(true);
   const [selectedBackgroundId, setSelectedBackgroundId] = useState<string | null>(null);
+  const [lastPublicBackgroundId, setLastPublicBackgroundId] = useState<string | null>(null);
   const [lastCelebratedWeek, setLastCelebratedWeek] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState("");
   const [syncError, setSyncError] = useState("");
@@ -516,6 +518,31 @@ export default function GameBoard({
         setLastCelebratedWeek(preferences.last_celebrated_week ?? null);
       } else {
         setActiveProfileId(currentUserId);
+      }
+
+      const fallbackStorageKey = LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId;
+      const storedFallbackId = typeof window !== "undefined"
+        ? window.localStorage.getItem(fallbackStorageKey)
+        : null;
+      const preferredPublicId = preferences?.selected_background_id &&
+        backgroundRows.some(row => row.id === preferences.selected_background_id)
+        ? preferences.selected_background_id
+        : null;
+      const storedPublicId = storedFallbackId && storedFallbackId !== "__default__" &&
+        backgroundRows.some(row => row.id === storedFallbackId)
+        ? storedFallbackId
+        : null;
+      const fallbackId = storedFallbackId === "__default__"
+        ? null
+        : preferredPublicId ?? storedPublicId ?? (
+          preferences?.selected_background_id ? backgroundRows[0]?.id ?? null : null
+        );
+      setLastPublicBackgroundId(fallbackId);
+      if (typeof window !== "undefined") {
+        if (fallbackId) window.localStorage.setItem(fallbackStorageKey, fallbackId);
+        else if (storedFallbackId === "__default__" || !preferences?.selected_background_id) {
+          window.localStorage.setItem(fallbackStorageKey, "__default__");
+        }
       }
 
       setBackgrounds(backgroundRows.map(row => ({
@@ -880,6 +907,10 @@ export default function GameBoard({
         setBackgrounds(current => [...current, nextBackground]);
       }
       setSelectedBackgroundId(nextBackground.id);
+      if (!nextBackground.isPrivate) {
+        setLastPublicBackgroundId(nextBackground.id);
+        window.localStorage.setItem(LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId, nextBackground.id);
+      }
       await persistPreferences({ selectedBackgroundId: nextBackground.id });
     } catch (error) {
       console.warn("Could not upload background.", error);
@@ -1035,8 +1066,9 @@ export default function GameBoard({
     .find(background => background.id === selectedBackgroundId) ?? null;
   const selectedBackgroundIsPrivate = selectedBackgroundId !== null &&
     !backgrounds.some(background => background.id === selectedBackgroundId);
-  const displayedBackground = selectedBackgroundIsPrivate && !privateThemeSessionEnabled
-    ? null
+  const lastPublicBackground = backgrounds.find(background => background.id === lastPublicBackgroundId) ?? null;
+  const displayedBackground = selectedBackgroundIsPrivate
+    ? privateThemeSessionEnabled ? selectedBackground : lastPublicBackground
     : selectedBackground;
   const activeGoals = activeMember ? goals.filter(goal => goal.playerId === activeMember.id) : [];
   const selfGoals = activeGoals.filter(goal => goal.assignedById === goal.playerId);
@@ -1186,6 +1218,8 @@ export default function GameBoard({
                     className={"backgroundTheme defaultBackground " + (selectedBackgroundId === null || (selectedBackgroundIsPrivate && !privateThemesUnlocked) ? "selected" : "")}
                     onClick={() => {
                       setSelectedBackgroundId(null);
+                      setLastPublicBackgroundId(null);
+                      window.localStorage.setItem(LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId, "__default__");
                       setBackgroundError("");
                       void persistPreferences({ selectedBackgroundId: null });
                     }}
@@ -1201,6 +1235,8 @@ export default function GameBoard({
                       style={{ backgroundImage: "url(" + background.dataUrl + ")" }}
                       onClick={() => {
                         setSelectedBackgroundId(background.id);
+                        setLastPublicBackgroundId(background.id);
+                        window.localStorage.setItem(LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId, background.id);
                         setBackgroundError("");
                         void persistPreferences({ selectedBackgroundId: background.id });
                       }}
