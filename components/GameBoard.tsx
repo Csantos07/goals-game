@@ -214,6 +214,9 @@ export default function GameBoard({
   const [allocatedCents, setAllocatedCents] = useState(0);
   const [allocationNotice, setAllocationNotice] = useState("");
   const [potReady, setPotReady] = useState(false);
+  const [previewEnvelope, setPreviewEnvelope] = useState("Vacation");
+  const [previewAllocationCents, setPreviewAllocationCents] = useState(0);
+  const [previewAllocatedTo, setPreviewAllocatedTo] = useState<string | null>(null);
   const [currentContributions, setCurrentContributions] = useState<Array<{ profile_id: string; amount_cents: number }>>([]);
   const [settlementContributions, setSettlementContributions] = useState<Array<{ profile_id: string; amount_cents: number }>>([]);
 
@@ -1455,6 +1458,34 @@ export default function GameBoard({
               <p className="weekResultEyebrow">{simulateMonday ? "MONDAY PREVIEW · CURRENT WEEK" : "LAST WEEK\u0027S GAME IS CLOSED"}</p>
               <h2 id="week-result-title">{simulateMonday ? (winner ? winner.displayName + " leads this preview." : "It\u0027s a tie in this preview.") : potReady ? (settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " wins the week." : "Last week ended in a tie.") : "Weekly celebration"}</h2>
               <p className="weekResultScoreLabel">PREVIOUS WEEK'S FINAL SCORE</p>
+              {simulateMonday && (() => {
+                const total = currentContributions.reduce((sum, item) => sum + item.amount_cents, 0);
+                const leaders = winner ? [winner] : rankedMembers.filter(member => (scores.get(member.id) ?? 0) === (scores.get(rankedMembers[0]?.id) ?? 0));
+                const share = leaders.length ? Math.floor(total / leaders.length) : 0;
+                const myEligibleShare = leaders.some(member => member.id === currentUserId) ? share : 0;
+                const money = (cents: number) => "$" + (cents / 100).toFixed(2);
+                return (
+                  <div style={{ padding: 16, marginBottom: 16, border: "1px solid currentColor", borderRadius: 12 }}>
+                    <h3>Where the money goes</h3>
+                    <p><strong>Weekly pot: {money(total)}</strong></p>
+                    {members.map(member => <p key={member.id}>{member.displayName} contributed {money(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0))}</p>)}
+                    <p>{leaders.length === 1 ? leaders[0].displayName + " wins " + money(total) : "Tie: " + leaders.map(member => member.displayName).join(" and ") + " split " + money(total) + " (" + money(share) + " each)"}</p>
+                    <p style={{ marginTop: 12 }}>Choose a savings envelope:</p>
+                    <select aria-label="Preview destination envelope" value={previewEnvelope} onChange={event => setPreviewEnvelope(event.target.value)} style={{ padding: 10, borderRadius: 8, width: "100%" }}>
+                      <option value="Vacation">Vacation</option>
+                    </select>
+                    <p>Vacation before: {money(Math.round(vacationBalance * 100))}</p>
+                    <p>Vacation after: <strong>{money(Math.round(vacationBalance * 100) + (previewAllocatedTo === "Vacation" ? previewAllocationCents : 0))}</strong></p>
+                    {previewAllocatedTo ? <p role="status">Preview complete: {money(previewAllocationCents)} assigned to {previewAllocatedTo}. No real balance changed.</p> : (
+                      <button className="weekResultContinue" disabled={myEligibleShare <= 0} onClick={() => { setPreviewAllocationCents(myEligibleShare); setPreviewAllocatedTo(previewEnvelope); }}>
+                        {myEligibleShare > 0 ? "Preview assigning " + money(myEligibleShare) + " to " + previewEnvelope : "Only a winning player can assign winnings"}
+                      </button>
+                    )}
+                    <button className="weekResultContinue" onClick={() => { setPreviewAllocationCents(0); setPreviewAllocatedTo(null); }}>Reset preview</button>
+                    <small>Simulation only. No money is transferred or saved to an envelope.</small>
+                  </div>
+                );
+              })()}
               {potReady && !simulateMonday && (
                 <div style={{ padding: 16, marginBottom: 16, border: "1px solid currentColor", borderRadius: 12 }}>
                   <p>Weekly pot: <strong>${(potCents / 100).toFixed(2)}</strong></p>
@@ -1577,6 +1608,9 @@ export default function GameBoard({
           className="closeWeek"
           onClick={() => {
             setSimulateMonday(value => !value);
+            setPreviewAllocationCents(0);
+            setPreviewAllocatedTo(null);
+            setPreviewEnvelope("Vacation");
             setPotReady(false);
             setShowWeekResult(true);
           }}
