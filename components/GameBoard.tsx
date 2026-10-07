@@ -187,7 +187,8 @@ export default function GameBoard({
   const weekLabel = useMemo(() => getWeekLabel(weekStart), [weekStart]);
   const today = getCurrentDayKey();
   const isSunday = new Date().getDay() === 0;
-  const isMonday = new Date().getDay() === 1;
+  const [simulateMonday, setSimulateMonday] = useState(false);
+  const isMonday = new Date().getDay() === 1 || simulateMonday;
   const migrationAttempted = useRef(false);
   const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const privateThemeRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1447,6 +1448,15 @@ export default function GameBoard({
           <div className="bar"><span style={{ width: String(progress) + "%" }} /></div>
           <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
         </section>
+
+        <button
+          className="closeWeek"
+          onClick={() => setSimulateMonday(value => !value)}
+          aria-pressed={simulateMonday}
+          title="Test branch only"
+        >
+          {simulateMonday ? "🧪 Stop simulating Monday" : "🧪 Simulate Monday"}
+        </button>
 
         {isMonday && (
           <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
