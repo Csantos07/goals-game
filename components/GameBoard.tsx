@@ -48,6 +48,7 @@ const DAILY_POINTS = 10;
 const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
 const LEGACY_STORAGE_KEY = "goals-game:v1";
 const LEGACY_SUNDAY_KEY = "goals-game:last-sunday-celebration";
+const DEMO_VACATION_BALANCE = 11011;
 const LEGACY_BACKGROUNDS_KEY = "goals-game:backgrounds:v1";
 const LEGACY_SELECTED_BACKGROUND_KEY = "goals-game:selected-background:v1";
 const LAST_PUBLIC_BACKGROUND_KEY = "goals-game:last-public-background:v1";
@@ -186,6 +187,7 @@ export default function GameBoard({
   const weekLabel = useMemo(() => getWeekLabel(weekStart), [weekStart]);
   const today = getCurrentDayKey();
   const isSunday = new Date().getDay() === 0;
+  const isMonday = new Date().getDay() === 1;
   const migrationAttempted = useRef(false);
   const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const privateThemeRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -206,7 +208,7 @@ export default function GameBoard({
   const [showWeekResult, setShowWeekResult] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
-  const [vacationBalance, setVacationBalance] = useState(350);
+  const [vacationBalance, setVacationBalance] = useState(DEMO_VACATION_BALANCE);
   const [backgrounds, setBackgrounds] = useState<BackgroundTheme[]>([]);
   const [privateBackgrounds, setPrivateBackgrounds] = useState<BackgroundTheme[]>([]);
   const [privateThemesUnlocked, setPrivateThemesUnlocked] = useState(false);
@@ -553,7 +555,7 @@ export default function GameBoard({
       })));
 
       if (envelopeResult.data) {
-        setVacationBalance(envelopeResult.data.balance_cents / 100);
+        setVacationBalance(DEMO_VACATION_BALANCE);
       } else {
         const { data: insertedEnvelope, error: insertEnvelopeError } = await supabase
           .from("envelopes")
@@ -561,7 +563,7 @@ export default function GameBoard({
           .select("balance_cents")
           .single();
         if (insertEnvelopeError && insertEnvelopeError.code !== "23505") throw insertEnvelopeError;
-        setVacationBalance((insertedEnvelope?.balance_cents ?? 35000) / 100);
+        setVacationBalance(DEMO_VACATION_BALANCE);
       }
 
       setReady(true);
@@ -618,13 +620,13 @@ export default function GameBoard({
   }, [showMenu]);
 
   useEffect(() => {
-    if (!ready || !isSunday || lastCelebratedWeek === weekStart) return;
+    if (!ready || !isMonday || lastCelebratedWeek === weekStart) return;
 
     setShowWeekResult(true);
     setLastCelebratedWeek(weekStart);
 
     void persistPreferences({ lastCelebratedWeek: weekStart });
-  }, [currentUserId, isSunday, lastCelebratedWeek, ready, supabase, weekStart]);
+  }, [currentUserId, isMonday, lastCelebratedWeek, ready, supabase, weekStart]);
 
   useEffect(() => {
     if (!ready) return;
@@ -1355,7 +1357,7 @@ export default function GameBoard({
             <button className="weekResultClose" onClick={() => setShowWeekResult(false)} aria-label="Close week result">×</button>
 
             <div className="weekResultContent">
-              <p className="weekResultEyebrow">THIS WEEK&apos;S GAME IS CLOSED</p>
+              <p className="weekResultEyebrow">LAST WEEK&apos;S GAME IS CLOSED</p>
               <h2 id="week-result-title">{winner ? winner.displayName + " wins the week." : "This week ends in a tie."}</h2>
               <p className="weekResultScoreLabel">FINAL SCORE</p>
               <div className="weekResultScore multiplayerResult">
@@ -1446,9 +1448,9 @@ export default function GameBoard({
           <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
         </section>
 
-        {isSunday && (
+        {isMonday && (
           <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
-            🏁 View final result
+            🏁 View last week&apos;s result
           </button>
         )}
 
