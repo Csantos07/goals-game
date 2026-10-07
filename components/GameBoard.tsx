@@ -18,6 +18,7 @@ type BackgroundTheme = {
   id: string;
   name: string;
   dataUrl: string;
+  isPrivate: boolean;
 };
 
 type Goal = {
@@ -51,6 +52,9 @@ const LEGACY_BACKGROUNDS_KEY = "goals-game:backgrounds:v1";
 const LEGACY_SELECTED_BACKGROUND_KEY = "goals-game:selected-background:v1";
 const MIGRATION_KEY = "goals-game:supabase-migrated:v1";
 const MAX_BACKGROUND_THEMES = 4;
+const MAX_PRIVATE_BACKGROUND_THEMES = 8;
+const PRIVATE_THEMES_EMAIL = "rcarlosantos89@gmail.com";
+const PRIVATE_THEMES_HOLD_MS = 3000;
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
@@ -181,6 +185,7 @@ export default function GameBoard({
   const today = getCurrentDayKey();
   const isSunday = new Date().getDay() === 0;
   const migrationAttempted = useRef(false);
+  const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [weekId, setWeekId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -200,6 +205,10 @@ export default function GameBoard({
   const [accent, setAccent] = useState("#c9ff54");
   const [vacationBalance, setVacationBalance] = useState(350);
   const [backgrounds, setBackgrounds] = useState<BackgroundTheme[]>([]);
+  const [privateBackgrounds, setPrivateBackgrounds] = useState<BackgroundTheme[]>([]);
+  const [privateThemesUnlocked, setPrivateThemesUnlocked] = useState(false);
+  const [unlockingPrivateThemes, setUnlockingPrivateThemes] = useState(false);
+  const [privateThemesSchemaReady, setPrivateThemesSchemaReady] = useState(true);
   const [selectedBackgroundId, setSelectedBackgroundId] = useState<string | null>(null);
   const [lastCelebratedWeek, setLastCelebratedWeek] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState("");
@@ -394,7 +403,7 @@ export default function GameBoard({
 
       setWeekId(week.id);
 
-      const [goalResult, preferenceResult, backgroundResult, envelopeResult] = await Promise.all([
+      const [goalResult, preferenceResult, envelopeResult] = await Promise.all([
         supabase
           .from("goals")
           .select("id, player_id, assigned_by, title, goal_type, points, completed_at, created_at")
@@ -406,12 +415,6 @@ export default function GameBoard({
           .eq("profile_id", currentUserId)
           .maybeSingle(),
         supabase
-          .from("user_backgrounds")
-          .select("id, name, data_url, created_at")
-          .eq("profile_id", currentUserId)
-          .eq("is_private", false)
-          .order("created_at", { ascending: true }),
-        supabase
           .from("envelopes")
           .select("id, balance_cents")
           .eq("group_id", groupId)
@@ -419,9 +422,36 @@ export default function GameBoard({
           .maybeSingle()
       ]);
 
+      let backgroundRows: Array<{ id: string; name: string; data_url: string; is_private?: boolean }> = [];
+      const privateBackgroundResult = await supabase
+        .from("user_backgrounds")
+        .select("id, name, data_url, is_private, created_at")
+        .eq("profile_id", currentUserId)
+        .eq("is_private", false)
+        .order("created_at", { ascending: true });
+
+      const privateFlagMissing = privateBackgroundResult.error?.code === "42703" ||
+        privateBackgroundResult.error?.code === "PGRST204" ||
+        privateBackgroundResult.error?.message.toLowerCase().includes("is_private");
+      if (privateBackgroundResult.error && privateFlagMissing) {
+        // Keep existing deployments usable until the additive SQL upgrade is applied.
+        setPrivateThemesSchemaReady(false);
+        const legacyBackgroundResult = await supabase
+          .from("user_backgrounds")
+          .select("id, name, data_url, created_at")
+          .eq("profile_id", currentUserId)
+          .order("created_at", { ascending: true });
+        if (legacyBackgroundResult.error) throw legacyBackgroundResult.error;
+        backgroundRows = legacyBackgroundResult.data ?? [];
+      } else if (privateBackgroundResult.error) {
+        throw privateBackgroundResult.error;
+      } else {
+        setPrivateThemesSchemaReady(true);
+        backgroundRows = privateBackgroundResult.data ?? [];
+      }
+
       if (goalResult.error) throw goalResult.error;
       if (preferenceResult.error) throw preferenceResult.error;
-      if (backgroundResult.error) throw backgroundResult.error;
       if (envelopeResult.error) throw envelopeResult.error;
 
       if (allowMigration && !migrationAttempted.current) {
@@ -430,7 +460,7 @@ export default function GameBoard({
           week.id,
           goalResult.data ?? [],
           Boolean(preferenceResult.data),
-          backgroundResult.data?.length ?? 0,
+          backgroundRows.length,
           Boolean(envelopeResult.data)
         );
         if (didMigrate) {
@@ -485,10 +515,11 @@ export default function GameBoard({
         setActiveProfileId(currentUserId);
       }
 
-      setBackgrounds((backgroundResult.data ?? []).map(row => ({
+      setBackgrounds(backgroundRows.map(row => ({
         id: row.id,
         name: row.name,
-        dataUrl: row.data_url
+        dataUrl: row.data_url,
+        isPrivate: false
       })));
 
       if (envelopeResult.data) {
@@ -514,6 +545,31 @@ export default function GameBoard({
   useEffect(() => {
     void loadData(true);
   }, [loadData]);
+
+  useEffect(() => {
+    if (showSettings && showMenu) return;
+    lockPrivateThemes();
+  }, [showMenu, showSettings]);
+
+  useEffect(() => {
+    const lockPrivateThemes = () => {
+      setPrivateThemesUnlocked(false);
+      setPrivateBackgrounds(current =>
+        selectedBackgroundId && current.some(background => background.id === selectedBackgroundId)
+          ? current.filter(background => background.id === selectedBackgroundId)
+          : []
+      );
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") lockPrivateThemes();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", lockPrivateThemes);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", lockPrivateThemes);
+    };
+  }, [selectedBackgroundId]);
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -768,7 +824,7 @@ export default function GameBoard({
     }
   }
 
-  async function uploadBackground(file?: File) {
+  async function uploadBackground(file?: File, isPrivate = false) {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -776,8 +832,10 @@ export default function GameBoard({
       return;
     }
 
-    if (backgrounds.length >= MAX_BACKGROUND_THEMES) {
-      setBackgroundError("You can keep up to " + MAX_BACKGROUND_THEMES + " custom backgrounds right now.");
+    const existingCount = isPrivate ? privateBackgrounds.length : backgrounds.length;
+    const maxCount = isPrivate ? MAX_PRIVATE_BACKGROUND_THEMES : MAX_BACKGROUND_THEMES;
+    if (existingCount >= maxCount) {
+      setBackgroundError("You can keep up to " + maxCount + (isPrivate ? " private" : " regular") + " backgrounds right now.");
       return;
     }
 
@@ -785,25 +843,39 @@ export default function GameBoard({
 
     try {
       const dataUrl = await compressBackground(file);
-      const { data, error } = await supabase
-        .from("user_backgrounds")
-        .insert({
-          profile_id: currentUserId,
-          name: file.name.replace(/\.[^.]+$/, "") || "Custom background",
-          data_url: dataUrl
-        })
-        .select("id, name, data_url")
-        .single();
+      if (isPrivate && !privateThemesSchemaReady) {
+        throw new Error("Run the private themes SQL upgrade before adding private photos.");
+      }
+      const name = file.name.replace(/\.[^.]+$/, "") || "Custom background";
+      let nextBackground: BackgroundTheme;
+      if (privateThemesSchemaReady) {
+        const { data, error } = await supabase
+          .from("user_backgrounds")
+          .insert({ profile_id: currentUserId, name, data_url: dataUrl, is_private: isPrivate })
+          .select("id, name, data_url, is_private")
+          .single();
+        if (error) throw error;
+        nextBackground = {
+          id: data.id,
+          name: data.name,
+          dataUrl: data.data_url,
+          isPrivate: Boolean(data.is_private)
+        };
+      } else {
+        const { data, error } = await supabase
+          .from("user_backgrounds")
+          .insert({ profile_id: currentUserId, name, data_url: dataUrl })
+          .select("id, name, data_url")
+          .single();
+        if (error) throw error;
+        nextBackground = { id: data.id, name: data.name, dataUrl: data.data_url, isPrivate: false };
+      }
 
-      if (error) throw error;
-
-      const nextBackground = {
-        id: data.id,
-        name: data.name,
-        dataUrl: data.data_url
-      };
-
-      setBackgrounds(current => [...current, nextBackground]);
+      if (nextBackground.isPrivate) {
+        setPrivateBackgrounds(current => [...current, nextBackground]);
+      } else {
+        setBackgrounds(current => [...current, nextBackground]);
+      }
       setSelectedBackgroundId(nextBackground.id);
       await persistPreferences({ selectedBackgroundId: nextBackground.id });
     } catch (error) {
@@ -816,8 +888,10 @@ export default function GameBoard({
     if (!selectedBackgroundId) return;
 
     const oldBackgrounds = backgrounds;
+    const oldPrivateBackgrounds = privateBackgrounds;
     const id = selectedBackgroundId;
     setBackgrounds(current => current.filter(background => background.id !== id));
+    setPrivateBackgrounds(current => current.filter(background => background.id !== id));
     setSelectedBackgroundId(null);
     setBackgroundError("");
     await persistPreferences({ selectedBackgroundId: null });
@@ -829,12 +903,76 @@ export default function GameBoard({
 
     if (error) {
       setBackgrounds(oldBackgrounds);
+      setPrivateBackgrounds(oldPrivateBackgrounds);
       setSelectedBackgroundId(id);
       setBackgroundError("Could not remove that background.");
     }
   }
 
-  const selectedBackground = backgrounds.find(background => background.id === selectedBackgroundId) ?? null;
+  async function unlockPrivateThemes() {
+    if (!privateThemesSchemaReady) return;
+    setUnlockingPrivateThemes(true);
+    setBackgroundError("");
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      const email = authData.user?.email?.trim().toLowerCase();
+      if (!authData.user || authData.user.id !== currentUserId || email !== PRIVATE_THEMES_EMAIL) {
+        lockPrivateThemes();
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("user_backgrounds")
+        .select("id, name, data_url, is_private")
+        .eq("profile_id", currentUserId)
+        .eq("is_private", true)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+
+      setPrivateBackgrounds((data ?? []).map(row => ({
+        id: row.id,
+        name: row.name,
+        dataUrl: row.data_url,
+        isPrivate: true
+      })));
+      setPrivateThemesUnlocked(true);
+    } catch (error) {
+      console.warn("Could not open private themes.", error);
+      setBackgroundError(error instanceof Error ? error.message : "Could not open private themes.");
+    } finally {
+      setUnlockingPrivateThemes(false);
+    }
+  }
+
+  function lockPrivateThemes() {
+    setPrivateThemesUnlocked(false);
+    setPrivateBackgrounds(current =>
+      selectedBackgroundId && current.some(background => background.id === selectedBackgroundId)
+        ? current.filter(background => background.id === selectedBackgroundId)
+        : []
+    );
+  }
+
+  function startPrivateThemesHold() {
+    if (privateThemesUnlocked || unlockingPrivateThemes || !privateThemesSchemaReady) return;
+    if (privateThemesHoldTimer.current) clearTimeout(privateThemesHoldTimer.current);
+    privateThemesHoldTimer.current = setTimeout(() => {
+      privateThemesHoldTimer.current = null;
+      void unlockPrivateThemes();
+    }, PRIVATE_THEMES_HOLD_MS);
+  }
+
+  function cancelPrivateThemesHold() {
+    if (!privateThemesHoldTimer.current) return;
+    clearTimeout(privateThemesHoldTimer.current);
+    privateThemesHoldTimer.current = null;
+  }
+
+  const selectedBackground = [...backgrounds, ...privateBackgrounds]
+    .find(background => background.id === selectedBackgroundId) ?? null;
+  const selectedBackgroundIsPrivate = selectedBackgroundId !== null &&
+    !backgrounds.some(background => background.id === selectedBackgroundId);
   const activeGoals = activeMember ? goals.filter(goal => goal.playerId === activeMember.id) : [];
   const selfGoals = activeGoals.filter(goal => goal.assignedById === goal.playerId);
   const challengeGoals = activeGoals.filter(goal => goal.assignedById !== goal.playerId);
@@ -946,7 +1084,13 @@ export default function GameBoard({
               </div>
 
               <div className="backgroundSettings">
-                <div className="backgroundSettingsHead">
+                <div
+                  className="backgroundSettingsHead"
+                  onPointerDown={startPrivateThemesHold}
+                  onPointerUp={cancelPrivateThemesHold}
+                  onPointerCancel={cancelPrivateThemesHold}
+                  onPointerLeave={cancelPrivateThemesHold}
+                >
                   <div>
                     <span>Backgrounds</span>
                     <small>Saved to your account</small>
@@ -956,13 +1100,13 @@ export default function GameBoard({
 
                 <div className="backgroundThemeGrid">
                   <button
-                    className={"backgroundTheme defaultBackground " + (selectedBackgroundId === null ? "selected" : "")}
+                    className={"backgroundTheme defaultBackground " + (selectedBackgroundId === null || (selectedBackgroundIsPrivate && !privateThemesUnlocked) ? "selected" : "")}
                     onClick={() => {
                       setSelectedBackgroundId(null);
                       setBackgroundError("");
                       void persistPreferences({ selectedBackgroundId: null });
                     }}
-                    aria-pressed={selectedBackgroundId === null}
+                    aria-pressed={selectedBackgroundId === null || (selectedBackgroundIsPrivate && !privateThemesUnlocked)}
                   >
                     <span>Default</span>
                   </button>
@@ -1007,6 +1151,59 @@ export default function GameBoard({
                 </div>
 
                 <p className="backgroundHint">Your theme now follows your login across browsers and devices.</p>
+
+
+                {privateThemesUnlocked && (
+                  <div className="privateThemesPanel">
+                    <div className="backgroundSettingsHead">
+                      <div>
+                        <span>Private themes</span>
+                        <small>Private account themes</small>
+                      </div>
+                      <small>{privateBackgrounds.length}/{MAX_PRIVATE_BACKGROUND_THEMES}</small>
+                    </div>
+
+                    {privateBackgrounds.length > 0 ? (
+                      <div className="backgroundThemeGrid">
+                        {privateBackgrounds.map(background => (
+                          <button
+                            key={background.id}
+                            type="button"
+                            className={"backgroundTheme " + (selectedBackgroundId === background.id ? "selected" : "")}
+                            style={{ backgroundImage: "url(" + background.dataUrl + ")" }}
+                            onClick={() => {
+                              setSelectedBackgroundId(background.id);
+                              setBackgroundError("");
+                              void persistPreferences({ selectedBackgroundId: background.id });
+                            }}
+                            aria-pressed={selectedBackgroundId === background.id}
+                            title={background.name}
+                          >
+                            <span>{background.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="backgroundHint">No private themes yet. Add a photo here to keep it out of the regular theme list.</p>
+                    )}
+
+                    <button type="button" className="privateThemesToggle" onClick={lockPrivateThemes}>Lock private themes</button>
+
+                    <label className={"backgroundUpload " + (privateBackgrounds.length >= MAX_PRIVATE_BACKGROUND_THEMES ? "disabled" : "")}>
+                      ＋ Add private photo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={privateBackgrounds.length >= MAX_PRIVATE_BACKGROUND_THEMES}
+                        onChange={event => {
+                          void uploadBackground(event.target.files?.[0], true);
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+
                 {backgroundError && <p className="backgroundError" role="alert">{backgroundError}</p>}
               </div>
 
