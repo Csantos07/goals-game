@@ -55,6 +55,7 @@ const MAX_BACKGROUND_THEMES = 4;
 const MAX_PRIVATE_BACKGROUND_THEMES = 8;
 const PRIVATE_THEMES_EMAIL = "rcarlosantos89@gmail.com";
 const PRIVATE_THEMES_HOLD_MS = 3000;
+const PRIVATE_THEME_REVEAL_HOLD_MS = 2000;
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
@@ -186,6 +187,7 @@ export default function GameBoard({
   const isSunday = new Date().getDay() === 0;
   const migrationAttempted = useRef(false);
   const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const privateThemeRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [weekId, setWeekId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -207,6 +209,7 @@ export default function GameBoard({
   const [backgrounds, setBackgrounds] = useState<BackgroundTheme[]>([]);
   const [privateBackgrounds, setPrivateBackgrounds] = useState<BackgroundTheme[]>([]);
   const [privateThemesUnlocked, setPrivateThemesUnlocked] = useState(false);
+  const [privateThemeSessionEnabled, setPrivateThemeSessionEnabled] = useState(false);
   const [unlockingPrivateThemes, setUnlockingPrivateThemes] = useState(false);
   const [privateThemesSchemaReady, setPrivateThemesSchemaReady] = useState(true);
   const [selectedBackgroundId, setSelectedBackgroundId] = useState<string | null>(null);
@@ -945,6 +948,65 @@ export default function GameBoard({
     }
   }
 
+  async function revealPrivateThemeForSession() {
+    const backgroundId = selectedBackgroundId;
+    if (!backgroundId || backgrounds.some(background => background.id === backgroundId)) return;
+    if (!privateThemesSchemaReady) return;
+
+    setBackgroundError("");
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      const email = authData.user?.email?.trim().toLowerCase();
+      if (!authData.user || authData.user.id !== currentUserId || email !== PRIVATE_THEMES_EMAIL) {
+        setPrivateThemeSessionEnabled(false);
+        lockPrivateThemes();
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("user_backgrounds")
+        .select("id, name, data_url, is_private")
+        .eq("id", backgroundId)
+        .eq("profile_id", currentUserId)
+        .eq("is_private", true)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return;
+
+      const background = {
+        id: data.id,
+        name: data.name,
+        dataUrl: data.data_url,
+        isPrivate: true
+      };
+      setPrivateBackgrounds(current => current.some(item => item.id === background.id)
+        ? current
+        : [...current, background]
+      );
+      setPrivateThemeSessionEnabled(true);
+    } catch (error) {
+      console.warn("Could not reveal the selected private theme.", error);
+      setBackgroundError(error instanceof Error ? error.message : "Could not reveal the selected private theme.");
+    }
+  }
+
+  function startPrivateThemeRevealHold() {
+    if (!selectedBackgroundId || backgrounds.some(background => background.id === selectedBackgroundId)) return;
+    if (!privateThemesSchemaReady) return;
+    if (privateThemeRevealTimer.current) clearTimeout(privateThemeRevealTimer.current);
+    privateThemeRevealTimer.current = setTimeout(() => {
+      privateThemeRevealTimer.current = null;
+      void revealPrivateThemeForSession();
+    }, PRIVATE_THEME_REVEAL_HOLD_MS);
+  }
+
+  function cancelPrivateThemeRevealHold() {
+    if (!privateThemeRevealTimer.current) return;
+    clearTimeout(privateThemeRevealTimer.current);
+    privateThemeRevealTimer.current = null;
+  }
+
   function lockPrivateThemes() {
     setPrivateThemesUnlocked(false);
     setPrivateBackgrounds(current =>
@@ -973,6 +1035,9 @@ export default function GameBoard({
     .find(background => background.id === selectedBackgroundId) ?? null;
   const selectedBackgroundIsPrivate = selectedBackgroundId !== null &&
     !backgrounds.some(background => background.id === selectedBackgroundId);
+  const displayedBackground = selectedBackgroundIsPrivate && !privateThemeSessionEnabled
+    ? null
+    : selectedBackground;
   const activeGoals = activeMember ? goals.filter(goal => goal.playerId === activeMember.id) : [];
   const selfGoals = activeGoals.filter(goal => goal.assignedById === goal.playerId);
   const challengeGoals = activeGoals.filter(goal => goal.assignedById !== goal.playerId);
@@ -993,11 +1058,11 @@ export default function GameBoard({
   }
 
   return (
-    <div className={"appFrame " + (selectedBackground ? "hasBackground" : "")} data-theme={themeMode} style={themeStyle}>
-      {selectedBackground && (
+    <div className={"appFrame " + (displayedBackground ? "hasBackground" : "")} data-theme={themeMode} style={themeStyle}>
+      {displayedBackground && (
         <div
           className="gameBackground"
-          style={{ backgroundImage: "url(" + selectedBackground.dataUrl + ")" }}
+          style={{ backgroundImage: "url(" + displayedBackground.dataUrl + ")" }}
           aria-hidden="true"
         />
       )}
@@ -1015,7 +1080,25 @@ export default function GameBoard({
         <header className="top">
           <div>
             <p className="eyebrow">GOALS GAME</p>
-            <h1>Win the week <span>together.</span></h1>
+            <h1
+              onPointerDown={startPrivateThemeRevealHold}
+              onPointerUp={cancelPrivateThemeRevealHold}
+              onPointerCancel={cancelPrivateThemeRevealHold}
+              onPointerLeave={cancelPrivateThemeRevealHold}
+              onContextMenu={event => event.preventDefault()}
+              onKeyDown={event => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  void revealPrivateThemeForSession();
+                }
+              }}
+              tabIndex={selectedBackgroundIsPrivate ? 0 : undefined}
+              role={selectedBackgroundIsPrivate ? "button" : undefined}
+              aria-label={selectedBackgroundIsPrivate ? "Reveal the private theme for this session" : undefined}
+              aria-pressed={selectedBackgroundIsPrivate ? privateThemeSessionEnabled : undefined}
+            >
+              Win the week <span>together.</span>
+            </h1>
             <p className="sub">{weekLabel} · Today is {today}</p>
           </div>
         </header>
