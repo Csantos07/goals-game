@@ -402,6 +402,32 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 }
 .backgroundHint{color:rgba(255,255,255,.7)}
 .backgroundError{color:#fff;font-weight:800}
+.privateThemesAccess{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px
+}
+.privateThemesAccess small{font-size:10px;color:rgba(255,255,255,.58)}
+.privateThemesToggle{
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:10px;
+  background:rgba(255,255,255,.06);
+  color:rgba(255,255,255,.82);
+  padding:7px 10px;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer
+}
+.privateThemesToggle:disabled{opacity:.55;cursor:wait}
+.privateThemesPanel{
+  display:grid;
+  gap:11px;
+  padding:12px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:15px;
+  background:rgba(0,0,0,.14)
+}
 
 @media(max-width:520px){
   .gameBackground{background-position:center top}
