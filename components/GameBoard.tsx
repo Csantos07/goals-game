@@ -700,13 +700,19 @@ export default function GameBoard({
   }, [showMenu]);
 
   useEffect(() => {
-    if (!ready || !isMonday || lastCelebratedWeek === weekStart) return;
-
+    if (!ready || !isMonday) return;
+    // Preview simulation must always replay the celebration, even when
+    // the normal Monday celebration has already been acknowledged.
+    if (simulateMonday) {
+      setShowWeekResult(true);
+      return;
+    }
+    const previousWeek = addDays(weekStart, -7);
+    if (lastCelebratedWeek === previousWeek) return;
     setShowWeekResult(true);
-    setLastCelebratedWeek(weekStart);
-
-    void persistPreferences({ lastCelebratedWeek: weekStart });
-  }, [currentUserId, isMonday, lastCelebratedWeek, ready, supabase, weekStart]);
+    setLastCelebratedWeek(previousWeek);
+    void persistPreferences({ lastCelebratedWeek: previousWeek });
+  }, [isMonday, lastCelebratedWeek, ready, simulateMonday, weekStart, persistPreferences]);
 
   useEffect(() => {
     if (!ready) return;
@@ -1438,7 +1444,7 @@ export default function GameBoard({
 
             <div className="weekResultContent">
               <p className="weekResultEyebrow">LAST WEEK&apos;S GAME IS CLOSED</p>
-              <h2 id="week-result-title">{winner ? winner.displayName + " wins the week." : "This week ends in a tie."}</h2>
+              <h2 id="week-result-title">{potReady ? (settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " wins the week." : "Last week ended in a tie.") : "Weekly celebration"}</h2>
               <p className="weekResultScoreLabel">PREVIOUS WEEK'S FINAL SCORE</p>
               {potReady && (
                 <div style={{ padding: 16, marginBottom: 16, border: "1px solid currentColor", borderRadius: 12 }}>
@@ -1456,10 +1462,10 @@ export default function GameBoard({
                 </div>
               )}
               <div className="weekResultScore multiplayerResult">
-                {rankedMembers.map(member => (
+                {(potReady ? [...members].sort((a, b) => (settlementScores.get(b.id) ?? 0) - (settlementScores.get(a.id) ?? 0)) : rankedMembers).map(member => (
                   <span key={member.id}>
                     <b>{member.displayName}</b>
-                    <strong>{scores.get(member.id) ?? 0}</strong>
+                    <strong>{potReady ? (settlementScores.get(member.id) ?? 0) : (scores.get(member.id) ?? 0)}</strong>
                   </span>
                 ))}
               </div>
@@ -1558,7 +1564,10 @@ export default function GameBoard({
 
         <button
           className="closeWeek"
-          onClick={() => setSimulateMonday(value => !value)}
+          onClick={() => {
+            setShowWeekResult(true);
+            setSimulateMonday(value => !value);
+          }}
           aria-pressed={simulateMonday}
           title="Test branch only"
         >
