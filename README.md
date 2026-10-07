@@ -201,8 +201,6 @@ This includes:
 Additional browser keys track:
 
 - Sunday celebration state
-- uploaded background images
-- selected background
 
 These will gradually shrink as gameplay moves into Supabase.
 
@@ -215,7 +213,11 @@ Custom backgrounds:
 - crop responsively to fill the screen
 - can be switched like visual themes
 - activate the clear glass treatment
-- currently allow up to four browser-local custom backgrounds
+- allow up to four regular and eight private custom backgrounds per account
+- private themes are omitted from the regular theme list and fetched only after opening the private themes area
+- private background rows remain protected by the existing per-account row-level security policies
+
+Before deploying the private themes feature, run [`supabase/private_themes_upgrade.sql`](supabase/private_themes_upgrade.sql) once in the Supabase SQL Editor. Existing backgrounds remain regular themes by default. The private area is a discreet in-app gallery; it is not a reauthentication-protected vault.
 
 The default/no-background theme remains available.
 
@@ -427,7 +429,6 @@ Custom background images are currently stored as compressed data URLs in an RLS-
 - no realtime gameplay sync yet
 - no automatic week archive/reset yet
 - no wager transaction ledger yet
-- custom backgrounds remain browser-local
 
 ## Product principle
 
