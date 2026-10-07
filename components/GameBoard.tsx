@@ -214,6 +214,8 @@ export default function GameBoard({
   const [allocatedCents, setAllocatedCents] = useState(0);
   const [allocationNotice, setAllocationNotice] = useState("");
   const [potReady, setPotReady] = useState(false);
+  const [currentContributions, setCurrentContributions] = useState<Array<{ profile_id: string; amount_cents: number }>>([]);
+  const [settlementContributions, setSettlementContributions] = useState<Array<{ profile_id: string; amount_cents: number }>>([]);
 
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
@@ -593,15 +595,24 @@ export default function GameBoard({
   const [settlementLeaders, setSettlementLeaders] = useState<Member[]>([]);
   const [settlementScores, setSettlementScores] = useState<Map<string, number>>(new Map());
 
+  const loadCurrentPot = useCallback(async () => {
+    if (!weekId) return;
+    const { data, error } = await supabase.from("weekly_contributions").select("profile_id, amount_cents").eq("week_id", weekId);
+    if (error) { setPotError("Could not load this week\u0027s pot."); return; }
+    setCurrentContributions(data ?? []);
+  }, [supabase, weekId]);
+
+  useEffect(() => { void loadCurrentPot(); }, [loadCurrentPot]);
+
   const loadSettlement = useCallback(async () => {
-    if (!isMonday) return;
+    if (!isMonday || simulateMonday) return;
     const { data: previous, error: previousError } = await supabase.from("weeks")
       .select("id").eq("group_id", groupId).eq("starts_on", settlementWeekStart).maybeSingle();
     if (previousError || !previous) return;
     settlementWeekId.current = previous.id;
     const [goalResponse, contributionResponse, allocationResponse] = await Promise.all([
       supabase.from("goals").select("id, player_id, goal_type, points, completed_at").eq("week_id", previous.id),
-      supabase.from("weekly_contributions").select("amount_cents").eq("week_id", previous.id),
+      supabase.from("weekly_contributions").select("profile_id, amount_cents").eq("week_id", previous.id),
       supabase.from("weekly_allocations").select("profile_id, amount_cents").eq("week_id", previous.id)
     ]);
     if (goalResponse.error || contributionResponse.error || allocationResponse.error) {
@@ -622,11 +633,12 @@ export default function GameBoard({
     setSettlementScores(totals);
     setSettlementLeaders(leaders);
     settlementWinnerId.current = leaders.length === 1 ? leaders[0].id : null;
+    setSettlementContributions(contributionResponse.data ?? []);
     setPotCents((contributionResponse.data ?? []).reduce((sum, row) => sum + row.amount_cents, 0));
     setAllocatedCents((allocationResponse.data ?? []).filter(row => row.profile_id === currentUserId)
       .reduce((sum, row) => sum + row.amount_cents, 0));
     setPotReady(true);
-  }, [currentUserId, groupId, isMonday, members, settlementWeekStart, supabase]);
+  }, [currentUserId, groupId, isMonday, simulateMonday, members, settlementWeekStart, supabase]);
 
   useEffect(() => { void loadSettlement(); }, [loadSettlement]);
 
@@ -640,11 +652,12 @@ export default function GameBoard({
     });
     if (error) { setPotError("Could not save contribution. Check that the settlement SQL migration is installed."); return; }
     setPotInput("");
+    await loadCurrentPot();
     setAllocationNotice("Contribution saved for this week.");
   }
 
   async function allocateWinnings() {
-    if (!settlementWeekId.current || allocating) return;
+    if (simulateMonday || !settlementWeekId.current || allocating) return;
     setAllocating(true);
     setPotError("");
     const { data, error } = await supabase.rpc("allocate_weekly_winnings", {
@@ -700,19 +713,15 @@ export default function GameBoard({
   }, [showMenu]);
 
   useEffect(() => {
-    if (!ready || !isMonday) return;
-    // Preview simulation must always replay the celebration, even when
-    // the normal Monday celebration has already been acknowledged.
-    if (simulateMonday) {
-      setShowWeekResult(true);
-      return;
-    }
+    if (!ready || !isMonday || simulateMonday) return;
     const previousWeek = addDays(weekStart, -7);
     if (lastCelebratedWeek === previousWeek) return;
     setShowWeekResult(true);
     setLastCelebratedWeek(previousWeek);
     void persistPreferences({ lastCelebratedWeek: previousWeek });
-  }, [isMonday, lastCelebratedWeek, ready, simulateMonday, weekStart, persistPreferences]);
+  // This should run once when the real Monday begins, not on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, isMonday, simulateMonday, lastCelebratedWeek, weekStart]);
 
   useEffect(() => {
     if (!ready) return;
@@ -1443,10 +1452,10 @@ export default function GameBoard({
             <button className="weekResultClose" onClick={() => setShowWeekResult(false)} aria-label="Close week result">×</button>
 
             <div className="weekResultContent">
-              <p className="weekResultEyebrow">LAST WEEK&apos;S GAME IS CLOSED</p>
-              <h2 id="week-result-title">{potReady ? (settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " wins the week." : "Last week ended in a tie.") : "Weekly celebration"}</h2>
+              <p className="weekResultEyebrow">{simulateMonday ? "MONDAY PREVIEW · CURRENT WEEK" : "LAST WEEK\u0027S GAME IS CLOSED"}</p>
+              <h2 id="week-result-title">{simulateMonday ? (winner ? winner.displayName + " leads this preview." : "It\u0027s a tie in this preview.") : potReady ? (settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " wins the week." : "Last week ended in a tie.") : "Weekly celebration"}</h2>
               <p className="weekResultScoreLabel">PREVIOUS WEEK'S FINAL SCORE</p>
-              {potReady && (
+              {potReady && !simulateMonday && (
                 <div style={{ padding: 16, marginBottom: 16, border: "1px solid currentColor", borderRadius: 12 }}>
                   <p>Weekly pot: <strong>${(potCents / 100).toFixed(2)}</strong></p>
                   <p>{settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " won!" : "Tie — the pot is split evenly."}</p>
@@ -1462,10 +1471,10 @@ export default function GameBoard({
                 </div>
               )}
               <div className="weekResultScore multiplayerResult">
-                {(potReady ? [...members].sort((a, b) => (settlementScores.get(b.id) ?? 0) - (settlementScores.get(a.id) ?? 0)) : rankedMembers).map(member => (
+                {(potReady && !simulateMonday ? [...members].sort((a, b) => (settlementScores.get(b.id) ?? 0) - (settlementScores.get(a.id) ?? 0)) : rankedMembers).map(member => (
                   <span key={member.id}>
                     <b>{member.displayName}</b>
-                    <strong>{potReady ? (settlementScores.get(member.id) ?? 0) : (scores.get(member.id) ?? 0)}</strong>
+                    <strong>{potReady && !simulateMonday ? (settlementScores.get(member.id) ?? 0) : (scores.get(member.id) ?? 0)}</strong>
                   </span>
                 ))}
               </div>
@@ -1509,6 +1518,8 @@ export default function GameBoard({
         <section className="card">
           <div className="sectionHead"><div><p className="eyebrow">WEEKLY STAKE</p><h2>Build this week&apos;s pot.</h2></div></div>
           <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>
+          <p><strong>This week\u0027s pot: ${(currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong></p>
+          {members.map(member => <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>)}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
             <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
               value={potInput} onChange={event => setPotInput(event.target.value)}
@@ -1565,8 +1576,9 @@ export default function GameBoard({
         <button
           className="closeWeek"
           onClick={() => {
-            setShowWeekResult(true);
             setSimulateMonday(value => !value);
+            setPotReady(false);
+            setShowWeekResult(true);
           }}
           aria-pressed={simulateMonday}
           title="Test branch only"
