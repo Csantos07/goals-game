@@ -601,7 +601,7 @@ export default function GameBoard({
   const loadCurrentPot = useCallback(async () => {
     if (!weekId) return;
     const { data, error } = await supabase.from("weekly_contributions").select("profile_id, amount_cents").eq("week_id", weekId);
-    if (error) { setPotError("Could not load this week\u0027s pot."); return; }
+    if (error) { setPotError("Could not load this week's pot."); return; }
     setCurrentContributions(data ?? []);
   }, [supabase, weekId]);
 
@@ -1455,8 +1455,8 @@ export default function GameBoard({
             <button className="weekResultClose" onClick={() => setShowWeekResult(false)} aria-label="Close week result">×</button>
 
             <div className="weekResultContent">
-              <p className="weekResultEyebrow">{simulateMonday ? "MONDAY PREVIEW · CURRENT WEEK" : "LAST WEEK\u0027S GAME IS CLOSED"}</p>
-              <h2 id="week-result-title">{simulateMonday ? (winner ? winner.displayName + " leads this preview." : "It\u0027s a tie in this preview.") : potReady ? (settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " wins the week." : "Last week ended in a tie.") : "Weekly celebration"}</h2>
+              <p className="weekResultEyebrow">{simulateMonday ? "MONDAY PREVIEW · CURRENT WEEK" : "LAST WEEK'S GAME IS CLOSED"}</p>
+              <h2 id="week-result-title">{simulateMonday ? (winner ? winner.displayName + " leads this preview." : "It's a tie in this preview.") : potReady ? (settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " wins the week." : "Last week ended in a tie.") : "Weekly celebration"}</h2>
               <p className="weekResultScoreLabel">PREVIOUS WEEK'S FINAL SCORE</p>
               {simulateMonday && (() => {
                 const total = currentContributions.reduce((sum, item) => sum + item.amount_cents, 0);
@@ -1549,7 +1549,7 @@ export default function GameBoard({
         <section className="card">
           <div className="sectionHead"><div><p className="eyebrow">WEEKLY STAKE</p><h2>Build this week&apos;s pot.</h2></div></div>
           <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>
-          <p><strong>This week\u0027s pot: ${(currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong></p>
+          <p><strong>This week's pot: ${(currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong></p>
           {members.map(member => <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>)}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
             <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
