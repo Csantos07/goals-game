@@ -204,6 +204,7 @@ export default function GameBoard({
   const [menuButtonVisible, setMenuButtonVisible] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showEnvelopes, setShowEnvelopes] = useState(false);
+  const [showPot, setShowPot] = useState(false);
   const [showWeekResult, setShowWeekResult] = useState(false);
   const [potCents, setPotCents] = useState(0);
   const [potInput, setPotInput] = useState("");
@@ -1503,31 +1504,16 @@ export default function GameBoard({
           ))}
         </section>
 
-        <button className="vacationTile" onClick={() => setShowEnvelopes(true)}>
-          <span className="vacationTileIcon">✉</span>
+        <button className="vacationTile" onClick={() => setShowPot(true)}>
+          <span className="vacationTileIcon">💰</span>
           <span className="vacationTileText">
-            <small>ENVELOPE</small>
-            <b>Vacation</b>
+            <small>THIS WEEK</small>
+            <b>Pot</b>
           </span>
-          <strong>{"$" + vacationBalance.toLocaleString()}</strong>
+          <strong>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>
           <span className="vacationTileArrow">›</span>
         </button>
 
-        <section className="card">
-          <div className="sectionHead"><div><p className="eyebrow">WEEKLY STAKE</p><h2>Build this week&apos;s pot.</h2></div></div>
-          <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>
-          <p><strong>This week's pot: ${(currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong></p>
-          {members.map(member => <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>)}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-            <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
-              value={potInput} onChange={event => setPotInput(event.target.value)}
-              placeholder="Amount ($)" style={{ padding: 10, borderRadius: 8 }} />
-            <button className="add" onClick={() => void contributeToPot()}>Add to pot</button>
-          </div>
-          {potError && <p role="alert">{potError}</p>}
-          {allocationNotice && <p role="status">{allocationNotice}</p>}
-          <small>This tracks pledges in the game; it does not transfer money.</small>
-        </section>
         <section className="card">
           <div className="sectionHead">
             <div>
@@ -1577,6 +1563,41 @@ export default function GameBoard({
           </button>
         )}
 
+        {showPot && (
+          <div className="potExpansionBack" onClick={() => setShowPot(false)}>
+            <section className="potExpansion" role="dialog" aria-modal="true" aria-labelledby="pot-title" onClick={event => event.stopPropagation()}>
+              <div className="potExpansionHero">
+                <span className="vacationTileIcon">💰</span>
+                <span className="potExpansionTitle">
+                  <small>THIS WEEK</small>
+                  <b id="pot-title">Pot</b>
+                </span>
+                <strong>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>
+                <button className="potExpansionClose" onClick={() => setShowPot(false)} aria-label="Close weekly pot">×</button>
+              </div>
+              <div className="potExpansionContent">
+                <p className="potExpansionIntro">Contributions are optional and never affect points. The pot locks after Sunday.</p>
+                <div className="potContributionBreakdown">
+                  {members.map(member => (
+                    <div className="potContributionRow" key={member.id}>
+                      <span>{member.displayName}</span>
+                      <strong>${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>
+                    </div>
+                  ))}
+                </div>
+                <label className="potContributionInput">
+                  <span>Add to the pot</span>
+                  <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
+                    value={potInput} onChange={event => setPotInput(event.target.value)} placeholder="Amount ($)" />
+                </label>
+                <button className="primary" onClick={() => void contributeToPot()}>Add to pot</button>
+                {potError && <p role="alert">{potError}</p>}
+                {allocationNotice && <p role="status">{allocationNotice}</p>}
+                <small className="potExpansionFootnote">This tracks pledges in the game; it does not transfer money.</small>
+              </div>
+            </section>
+          </div>
+        )}
         {showEnvelopes && (
           <section className="envelopePage">
             <div className="envelopePageInner">
