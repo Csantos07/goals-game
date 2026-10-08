@@ -203,7 +203,8 @@ export default function GameBoard({
   const [showMenu, setShowMenu] = useState(false);
   const [menuButtonVisible, setMenuButtonVisible] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  const [showEnvelopes, setShowEnvelopes] = useState(false);\n  const [showPot, setShowPot] = useState(false);
+  const [showEnvelopes, setShowEnvelopes] = useState(false);
+  const [showPot, setShowPot] = useState(false);
   const [showWeekResult, setShowWeekResult] = useState(false);
   const [potCents, setPotCents] = useState(0);
   const [potInput, setPotInput] = useState("");
