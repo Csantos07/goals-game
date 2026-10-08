@@ -524,7 +524,7 @@ create table public.weekly_allocations (
 
 create index weekly_contributions_week_id_idx on public.weekly_contributions(week_id);
 create index weekly_contributions_profile_id_idx on public.weekly_contributions(profile_id);
-create index weekly_allocations_week_id_idx on public.weekly_allocations(week_id);
+create unique index weekly_allocations_one_settlement_per_week on public.weekly_allocations(week_id);
 create index weekly_allocations_profile_id_idx on public.weekly_allocations(profile_id);
 create index weekly_allocations_envelope_id_idx on public.weekly_allocations(envelope_id);
 
