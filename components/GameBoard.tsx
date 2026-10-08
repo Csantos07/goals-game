@@ -1514,6 +1514,7 @@ export default function GameBoard({
         <section className="card">
           <div className="sectionHead"><div><p className="eyebrow">WEEKLY STAKE</p><h2>Build this week&apos;s pot.</h2></div></div>
           <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>
+          <p>This records your agreed contribution in the app; it does not move money between bank accounts.</p>
           <p><strong>This week's pot: ${(currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong></p>
           {members.map(member => <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>)}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
