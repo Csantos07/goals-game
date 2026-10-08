@@ -1504,7 +1504,17 @@ export default function GameBoard({
           ))}
         </section>
 
-        <button className="vacationTile" onClick={() => setShowPot(true)}>\n          <span className="vacationTileIcon">💰</span>\n          <span className="vacationTileText">\n            <small>THIS WEEK</small>\n            <b>Pot</b>\n          </span>\n          <strong>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>\n          <span className="vacationTileArrow">›</span>\n        </button>\n\n        <section className="card">
+        <button className="vacationTile" onClick={() => setShowPot(true)}>
+          <span className="vacationTileIcon">💰</span>
+          <span className="vacationTileText">
+            <small>THIS WEEK</small>
+            <b>Pot</b>
+          </span>
+          <strong>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>
+          <span className="vacationTileArrow">›</span>
+        </button>
+
+        <section className="card">
           <div className="sectionHead">
             <div>
               <p className="eyebrow">{(activeMember?.displayName ?? "PLAYER").toUpperCase()}&apos;S WEEK</p>
@@ -1553,7 +1563,28 @@ export default function GameBoard({
           </button>
         )}
 
-        {showPot && (\n          <div className="modalBack" onClick={() => setShowPot(false)}>\n            <div className="modal" onClick={event => event.stopPropagation()}>\n              <p className="eyebrow">WEEKLY POT</p>\n              <h2>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)} this week</h2>\n              <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>\n              {members.map(member => (\n                <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>\n              ))}\n              <label>\n                Add to the pot\n                <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"\n                  value={potInput} onChange={event => setPotInput(event.target.value)} placeholder="Amount ($)" />\n              </label>\n              <button className="primary" onClick={() => void contributeToPot()}>Add to pot</button>\n              {potError && <p role="alert">{potError}</p>}\n              {allocationNotice && <p role="status">{allocationNotice}</p>}\n              <small>This tracks pledges in the game; it does not transfer money.</small>\n            </div>\n          </div>\n        )}\n        {showEnvelopes && (
+        {showPot && (
+          <div className="modalBack" onClick={() => setShowPot(false)}>
+            <div className="modal" onClick={event => event.stopPropagation()}>
+              <p className="eyebrow">WEEKLY POT</p>
+              <h2>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)} this week</h2>
+              <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>
+              {members.map(member => (
+                <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>
+              ))}
+              <label>
+                Add to the pot
+                <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
+                  value={potInput} onChange={event => setPotInput(event.target.value)} placeholder="Amount ($)" />
+              </label>
+              <button className="primary" onClick={() => void contributeToPot()}>Add to pot</button>
+              {potError && <p role="alert">{potError}</p>}
+              {allocationNotice && <p role="status">{allocationNotice}</p>}
+              <small>This tracks pledges in the game; it does not transfer money.</small>
+            </div>
+          </div>
+        )}
+        {showEnvelopes && (
           <section className="envelopePage">
             <div className="envelopePageInner">
               <button className="backButton" onClick={() => setShowEnvelopes(false)}>← Back</button>
