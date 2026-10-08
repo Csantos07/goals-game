@@ -52,7 +52,8 @@ The game currently includes:
 - Monday–Sunday checkoffs
 - Automatic score totals and weekly progress
 - Goal create, edit, and delete controls
-- Vacation envelope display
+- Weekly pot contributions and winner allocation into the Vacation envelope
+- Sunday final scoring with a Monday closeout that remains available until viewed
 - Dark / light appearance modes
 - Custom accent colors
 - Full-screen hamburger navigation
@@ -64,19 +65,9 @@ The game currently includes:
 
 ### Important persistence status
 
-Authentication, profiles, groups, memberships, weeks, goals, and completion tables now exist in Supabase.
+Authentication, profiles, groups, memberships, weeks, goals, completions, weekly contributions, allocations, preferences, backgrounds, and envelope balances are persisted in Supabase.
 
-However, the **current GameBoard goal/checkoff UI still uses browser localStorage** while the database-backed gameplay layer is being completed.
-
-That means:
-
-- account/login state is shared and persistent
-- group membership is shared and persistent
-- invite codes are shared and persistent
-- the visible prototype goal board is still device/browser-local for now
-- custom uploaded backgrounds are also browser-local
-
-The next major engineering step is replacing the GameBoard's local goal/checkoff state with Supabase reads and mutations.
+The game board loads shared group data from Supabase and refreshes on realtime changes. Browser localStorage remains only for legacy import and small client-side fallbacks.
 
 ## Weekly game rules
 
@@ -106,22 +97,18 @@ With one goal in each slot, one player has **240 possible points per week**.
 ## Weekly lifecycle
 
 1. **Weekly setup**
-   - choose goals
-   - assign challenges
-   - eventually choose the week's wager/reward
+   - create goals and partner challenges
+   - record each player's optional contribution to the weekly pot
 2. **Monday–Sunday**
-   - complete goals
-   - check off daily goals
-   - watch the score race
-3. **Sunday closeout**
-   - determine the winner
-   - show the full-screen result celebration
-   - eventually resolve the wager/reward
-4. **Next week**
-   - archive/reset the previous game
-   - begin a fresh week
+   - complete goals and check off daily goals
+   - the pot stops accepting contributions after Sunday
+3. **After the week ends**
+   - the app shows the final scores and winner the first time a player opens the game
+   - the sole winner can assign the full pot to the shared Vacation envelope
+   - a tie leaves the pot unassigned
+   - the result remains available to reopen during the following week
 
-The Sunday result experience exists today. Automatic archival, wager settlement, and new-week creation are still future work.
+Pot entries and envelope allocations are in-app records. They do not move money between bank accounts.
 
 ## Supabase architecture
 
@@ -186,25 +173,7 @@ After the schema was applied, the Supabase security advisor reported **zero secu
 
 ## Local browser storage
 
-The current prototype still stores GameBoard presentation/gameplay state under:
-
-`goals-game:v1`
-
-This includes:
-
-- visible goals
-- active prototype player
-- appearance mode
-- accent
-- Vacation envelope balance
-
-Additional browser keys track:
-
-- Sunday celebration state
-- uploaded background images
-- selected background
-
-These will gradually shrink as gameplay moves into Supabase.
+Legacy prototype data under `goals-game:v1` can be imported into Supabase for accounts that still have it. Current goals, checkoffs, pot contributions, preferences, backgrounds, and Vacation balance are stored in Supabase. Client storage keeps only migration and fallback state.
 
 ## Background themes
 
@@ -221,15 +190,11 @@ The default/no-background theme remains available.
 
 ## Money / envelope model
 
-The Vacation envelope currently represents accumulated winnings/savings, not the weekly wager itself.
+The weekly pot is the sum of the contributions recorded by group members for that week's game. Contributions are optional and do not affect scores.
 
-Intended future model:
+After the week ends, one sole winner can allocate the full pot to the shared Vacation envelope. Tied weeks are not paid out. Each allocation is saved in `weekly_allocations`, so a week cannot be credited twice. The Vacation balance and contribution history are stored in Supabase.
 
-- weekly wager = variable amount chosen for that week's game
-- envelope = accumulated destination for winnings
-- transaction history = persisted ledger of payouts and adjustments
-
-The current envelope is still prototype display/state.
+These are in-app records only; they do not initiate real bank transfers.
 
 ## Run locally
 
