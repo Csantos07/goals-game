@@ -203,7 +203,7 @@ export default function GameBoard({
   const [showMenu, setShowMenu] = useState(false);
   const [menuButtonVisible, setMenuButtonVisible] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  const [showEnvelopes, setShowEnvelopes] = useState(false);
+  const [showEnvelopes, setShowEnvelopes] = useState(false);\n  const [showPot, setShowPot] = useState(false);
   const [showWeekResult, setShowWeekResult] = useState(false);
   const [potCents, setPotCents] = useState(0);
   const [potInput, setPotInput] = useState("");
@@ -1503,32 +1503,7 @@ export default function GameBoard({
           ))}
         </section>
 
-        <button className="vacationTile" onClick={() => setShowEnvelopes(true)}>
-          <span className="vacationTileIcon">✉</span>
-          <span className="vacationTileText">
-            <small>ENVELOPE</small>
-            <b>Vacation</b>
-          </span>
-          <strong>{"$" + vacationBalance.toLocaleString()}</strong>
-          <span className="vacationTileArrow">›</span>
-        </button>
-
-        <section className="card">
-          <div className="sectionHead"><div><p className="eyebrow">WEEKLY STAKE</p><h2>Build this week&apos;s pot.</h2></div></div>
-          <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>
-          <p><strong>This week's pot: ${(currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong></p>
-          {members.map(member => <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>)}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-            <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
-              value={potInput} onChange={event => setPotInput(event.target.value)}
-              placeholder="Amount ($)" style={{ padding: 10, borderRadius: 8 }} />
-            <button className="add" onClick={() => void contributeToPot()}>Add to pot</button>
-          </div>
-          {potError && <p role="alert">{potError}</p>}
-          {allocationNotice && <p role="status">{allocationNotice}</p>}
-          <small>This tracks pledges in the game; it does not transfer money.</small>
-        </section>
-        <section className="card">
+        <button className="vacationTile" onClick={() => setShowPot(true)}>\n          <span className="vacationTileIcon">💰</span>\n          <span className="vacationTileText">\n            <small>THIS WEEK</small>\n            <b>Pot</b>\n          </span>\n          <strong>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>\n          <span className="vacationTileArrow">›</span>\n        </button>\n\n        <section className="card">
           <div className="sectionHead">
             <div>
               <p className="eyebrow">{(activeMember?.displayName ?? "PLAYER").toUpperCase()}&apos;S WEEK</p>
@@ -1577,7 +1552,7 @@ export default function GameBoard({
           </button>
         )}
 
-        {showEnvelopes && (
+        {showPot && (\n          <div className="modalBack" onClick={() => setShowPot(false)}>\n            <div className="modal" onClick={event => event.stopPropagation()}>\n              <p className="eyebrow">WEEKLY POT</p>\n              <h2>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)} this week</h2>\n              <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>\n              {members.map(member => (\n                <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>\n              ))}\n              <label>\n                Add to the pot\n                <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"\n                  value={potInput} onChange={event => setPotInput(event.target.value)} placeholder="Amount ($)" />\n              </label>\n              <button className="primary" onClick={() => void contributeToPot()}>Add to pot</button>\n              {potError && <p role="alert">{potError}</p>}\n              {allocationNotice && <p role="status">{allocationNotice}</p>}\n              <small>This tracks pledges in the game; it does not transfer money.</small>\n            </div>\n          </div>\n        )}\n        {showEnvelopes && (
           <section className="envelopePage">
             <div className="envelopePageInner">
               <button className="backButton" onClick={() => setShowEnvelopes(false)}>← Back</button>
