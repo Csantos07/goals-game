@@ -160,8 +160,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   inset:0;
   z-index:60;
   display:grid;
-  place-items:center;
-  overflow:hidden;
+  place-items:start center;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
   background:var(--accent);
   color:var(--accent-contrast);
   animation:weekResultIn .48s cubic-bezier(.22,1,.36,1) both
@@ -170,7 +173,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   position:relative;
   z-index:2;
   width:min(720px,100%);
-  padding:84px 24px 64px;
+  padding:84px 24px max(64px, env(safe-area-inset-bottom));
+  margin:auto 0;
+  box-sizing:border-box;
   text-align:center
 }
 .weekResultEyebrow{
@@ -215,10 +220,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
   cursor:pointer
 }
 .weekResultClose{
-  position:absolute;
+  position:fixed;
   right:max(18px,calc((100vw - 720px)/2 + 18px));
-  top:18px;
-  z-index:3;
+  top:max(18px,env(safe-area-inset-top));
+  z-index:10;
   width:58px;
   height:58px;
   border-radius:18px;
