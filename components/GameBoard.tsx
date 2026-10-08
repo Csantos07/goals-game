@@ -724,6 +724,8 @@ export default function GameBoard({
 
     const refresh = () => {
       void loadData(false);
+      void loadCurrentPot();
+      void loadSettlement();
     };
 
     const channel = supabase
@@ -731,13 +733,15 @@ export default function GameBoard({
       .on("postgres_changes", { event: "*", schema: "public", table: "goals" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "goal_completions" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "envelopes" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "weekly_contributions" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "weekly_allocations" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "user_preferences" }, refresh)
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [groupId, loadData, ready, supabase]);
+  }, [groupId, loadCurrentPot, loadData, loadSettlement, ready, supabase]);
 
   async function persistPreferences(overrides: {
     themeMode?: ThemeMode;
