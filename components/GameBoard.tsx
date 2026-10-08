@@ -48,7 +48,6 @@ const DAILY_POINTS = 10;
 const ACCENTS = ["#c9ff54", "#8b5cf6", "#38bdf8", "#fb7185", "#f59e0b", "#22c55e"];
 const LEGACY_STORAGE_KEY = "goals-game:v1";
 const LEGACY_SUNDAY_KEY = "goals-game:last-sunday-celebration";
-const DEMO_VACATION_BALANCE = 11011;
 const LEGACY_BACKGROUNDS_KEY = "goals-game:backgrounds:v1";
 const LEGACY_SELECTED_BACKGROUND_KEY = "goals-game:selected-background:v1";
 const LAST_PUBLIC_BACKGROUND_KEY = "goals-game:last-public-background:v1";
@@ -187,8 +186,7 @@ export default function GameBoard({
   const weekLabel = useMemo(() => getWeekLabel(weekStart), [weekStart]);
   const today = getCurrentDayKey();
   const isSunday = new Date().getDay() === 0;
-  const [simulateMonday, setSimulateMonday] = useState(false);
-  const isMonday = new Date().getDay() === 1 || simulateMonday;
+  const isMonday = new Date().getDay() === 1;
   const migrationAttempted = useRef(false);
   const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const privateThemeRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -214,15 +212,12 @@ export default function GameBoard({
   const [allocatedCents, setAllocatedCents] = useState(0);
   const [allocationNotice, setAllocationNotice] = useState("");
   const [potReady, setPotReady] = useState(false);
-  const [previewEnvelope, setPreviewEnvelope] = useState("Vacation");
-  const [previewAllocationCents, setPreviewAllocationCents] = useState(0);
-  const [previewAllocatedTo, setPreviewAllocatedTo] = useState<string | null>(null);
   const [currentContributions, setCurrentContributions] = useState<Array<{ profile_id: string; amount_cents: number }>>([]);
   const [settlementContributions, setSettlementContributions] = useState<Array<{ profile_id: string; amount_cents: number }>>([]);
 
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [accent, setAccent] = useState("#c9ff54");
-  const [vacationBalance, setVacationBalance] = useState(DEMO_VACATION_BALANCE);
+  const [vacationBalance, setVacationBalance] = useState(350);
   const [backgrounds, setBackgrounds] = useState<BackgroundTheme[]>([]);
   const [privateBackgrounds, setPrivateBackgrounds] = useState<BackgroundTheme[]>([]);
   const [privateThemesUnlocked, setPrivateThemesUnlocked] = useState(false);
@@ -569,7 +564,7 @@ export default function GameBoard({
       })));
 
       if (envelopeResult.data) {
-        setVacationBalance(DEMO_VACATION_BALANCE);
+        setVacationBalance(envelopeResult.data.balance_cents / 100);
       } else {
         const { data: insertedEnvelope, error: insertEnvelopeError } = await supabase
           .from("envelopes")
@@ -577,7 +572,7 @@ export default function GameBoard({
           .select("balance_cents")
           .single();
         if (insertEnvelopeError && insertEnvelopeError.code !== "23505") throw insertEnvelopeError;
-        setVacationBalance(DEMO_VACATION_BALANCE);
+        setVacationBalance((insertedEnvelope?.balance_cents ?? 35000) / 100);
       }
 
       setReady(true);
@@ -608,7 +603,7 @@ export default function GameBoard({
   useEffect(() => { void loadCurrentPot(); }, [loadCurrentPot]);
 
   const loadSettlement = useCallback(async () => {
-    if (!isMonday || simulateMonday) return;
+    if (!isMonday) return;
     const { data: previous, error: previousError } = await supabase.from("weeks")
       .select("id").eq("group_id", groupId).eq("starts_on", settlementWeekStart).maybeSingle();
     if (previousError || !previous) return;
@@ -641,7 +636,7 @@ export default function GameBoard({
     setAllocatedCents((allocationResponse.data ?? []).filter(row => row.profile_id === currentUserId)
       .reduce((sum, row) => sum + row.amount_cents, 0));
     setPotReady(true);
-  }, [currentUserId, groupId, isMonday, simulateMonday, members, settlementWeekStart, supabase]);
+  }, [currentUserId, groupId, isMonday, members, settlementWeekStart, supabase]);
 
   useEffect(() => { void loadSettlement(); }, [loadSettlement]);
 
@@ -660,7 +655,7 @@ export default function GameBoard({
   }
 
   async function allocateWinnings() {
-    if (simulateMonday || !settlementWeekId.current || allocating) return;
+    if (!settlementWeekId.current || allocating) return;
     setAllocating(true);
     setPotError("");
     const { data, error } = await supabase.rpc("allocate_weekly_winnings", {
@@ -716,7 +711,7 @@ export default function GameBoard({
   }, [showMenu]);
 
   useEffect(() => {
-    if (!ready || !isMonday || simulateMonday) return;
+    if (!ready || !isMonday) return;
     const previousWeek = addDays(weekStart, -7);
     if (lastCelebratedWeek === previousWeek) return;
     setShowWeekResult(true);
@@ -724,7 +719,7 @@ export default function GameBoard({
     void persistPreferences({ lastCelebratedWeek: previousWeek });
   // This should run once when the real Monday begins, not on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, isMonday, simulateMonday, lastCelebratedWeek, weekStart]);
+  }, [ready, isMonday, lastCelebratedWeek, weekStart]);
 
   useEffect(() => {
     if (!ready) return;
@@ -1455,38 +1450,10 @@ export default function GameBoard({
             <button className="weekResultClose" onClick={() => setShowWeekResult(false)} aria-label="Close week result">×</button>
 
             <div className="weekResultContent">
-              <p className="weekResultEyebrow">{simulateMonday ? "MONDAY PREVIEW · CURRENT WEEK" : "LAST WEEK'S GAME IS CLOSED"}</p>
-              <h2 id="week-result-title">{simulateMonday ? (winner ? winner.displayName + " leads this preview." : "It's a tie in this preview.") : potReady ? (settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " wins the week." : "Last week ended in a tie.") : "Weekly celebration"}</h2>
+              <p className="weekResultEyebrow">LAST WEEK&apos;S GAME IS CLOSED</p>
+              <h2 id="week-result-title">{potReady ? (settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " wins the week." : "Last week ended in a tie.") : "Weekly celebration"}</h2>
               <p className="weekResultScoreLabel">PREVIOUS WEEK'S FINAL SCORE</p>
-              {simulateMonday && (() => {
-                const total = currentContributions.reduce((sum, item) => sum + item.amount_cents, 0);
-                const leaders = winner ? [winner] : rankedMembers.filter(member => (scores.get(member.id) ?? 0) === (scores.get(rankedMembers[0]?.id) ?? 0));
-                const share = leaders.length ? Math.floor(total / leaders.length) : 0;
-                const myEligibleShare = leaders.some(member => member.id === currentUserId) ? share : 0;
-                const money = (cents: number) => "$" + (cents / 100).toFixed(2);
-                return (
-                  <div style={{ padding: 16, marginBottom: 16, border: "1px solid currentColor", borderRadius: 12 }}>
-                    <h3>Where the money goes</h3>
-                    <p><strong>Weekly pot: {money(total)}</strong></p>
-                    {members.map(member => <p key={member.id}>{member.displayName} contributed {money(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0))}</p>)}
-                    <p>{leaders.length === 1 ? leaders[0].displayName + " wins " + money(total) : "Tie: " + leaders.map(member => member.displayName).join(" and ") + " split " + money(total) + " (" + money(share) + " each)"}</p>
-                    <p style={{ marginTop: 12 }}>Choose a savings envelope:</p>
-                    <select aria-label="Preview destination envelope" value={previewEnvelope} onChange={event => setPreviewEnvelope(event.target.value)} style={{ padding: 10, borderRadius: 8, width: "100%" }}>
-                      <option value="Vacation">Vacation</option>
-                    </select>
-                    <p>Vacation before: {money(Math.round(vacationBalance * 100))}</p>
-                    <p>Vacation after: <strong>{money(Math.round(vacationBalance * 100) + (previewAllocatedTo === "Vacation" ? previewAllocationCents : 0))}</strong></p>
-                    {previewAllocatedTo ? <p role="status">Preview complete: {money(previewAllocationCents)} assigned to {previewAllocatedTo}. No real balance changed.</p> : (
-                      <button className="weekResultContinue" disabled={myEligibleShare <= 0} onClick={() => { setPreviewAllocationCents(myEligibleShare); setPreviewAllocatedTo(previewEnvelope); }}>
-                        {myEligibleShare > 0 ? "Preview assigning " + money(myEligibleShare) + " to " + previewEnvelope : "Only a winning player can assign winnings"}
-                      </button>
-                    )}
-                    <button className="weekResultContinue" onClick={() => { setPreviewAllocationCents(0); setPreviewAllocatedTo(null); }}>Reset preview</button>
-                    <small>Simulation only. No money is transferred or saved to an envelope.</small>
-                  </div>
-                );
-              })()}
-              {potReady && !simulateMonday && (
+              {potReady && (
                 <div style={{ padding: 16, marginBottom: 16, border: "1px solid currentColor", borderRadius: 12 }}>
                   <p>Weekly pot: <strong>${(potCents / 100).toFixed(2)}</strong></p>
                   <p>{settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " won!" : "Tie — the pot is split evenly."}</p>
@@ -1502,10 +1469,10 @@ export default function GameBoard({
                 </div>
               )}
               <div className="weekResultScore multiplayerResult">
-                {(potReady && !simulateMonday ? [...members].sort((a, b) => (settlementScores.get(b.id) ?? 0) - (settlementScores.get(a.id) ?? 0)) : rankedMembers).map(member => (
+                {(potReady ? [...members].sort((a, b) => (settlementScores.get(b.id) ?? 0) - (settlementScores.get(a.id) ?? 0)) : rankedMembers).map(member => (
                   <span key={member.id}>
                     <b>{member.displayName}</b>
-                    <strong>{potReady && !simulateMonday ? (settlementScores.get(member.id) ?? 0) : (scores.get(member.id) ?? 0)}</strong>
+                    <strong>{potReady ? (settlementScores.get(member.id) ?? 0) : (scores.get(member.id) ?? 0)}</strong>
                   </span>
                 ))}
               </div>
@@ -1603,22 +1570,6 @@ export default function GameBoard({
           <div className="bar"><span style={{ width: String(progress) + "%" }} /></div>
           <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
         </section>
-
-        <button
-          className="closeWeek"
-          onClick={() => {
-            setSimulateMonday(value => !value);
-            setPreviewAllocationCents(0);
-            setPreviewAllocatedTo(null);
-            setPreviewEnvelope("Vacation");
-            setPotReady(false);
-            setShowWeekResult(true);
-          }}
-          aria-pressed={simulateMonday}
-          title="Test branch only"
-        >
-          {simulateMonday ? "🧪 Stop simulating Monday" : "🧪 Simulate Monday"}
-        </button>
 
         {isMonday && (
           <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
