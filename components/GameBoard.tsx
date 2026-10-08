@@ -1564,24 +1564,38 @@ export default function GameBoard({
         )}
 
         {showPot && (
-          <div className="modalBack" onClick={() => setShowPot(false)}>
-            <div className="modal" onClick={event => event.stopPropagation()}>
-              <p className="eyebrow">WEEKLY POT</p>
-              <h2>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)} this week</h2>
-              <p>Contributions are optional and never affect points. The pot locks after Sunday.</p>
-              {members.map(member => (
-                <p key={member.id}>{member.displayName}: ${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</p>
-              ))}
-              <label>
-                Add to the pot
-                <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
-                  value={potInput} onChange={event => setPotInput(event.target.value)} placeholder="Amount ($)" />
-              </label>
-              <button className="primary" onClick={() => void contributeToPot()}>Add to pot</button>
-              {potError && <p role="alert">{potError}</p>}
-              {allocationNotice && <p role="status">{allocationNotice}</p>}
-              <small>This tracks pledges in the game; it does not transfer money.</small>
-            </div>
+          <div className="potExpansionBack" onClick={() => setShowPot(false)}>
+            <section className="potExpansion" role="dialog" aria-modal="true" aria-labelledby="pot-title" onClick={event => event.stopPropagation()}>
+              <div className="potExpansionHero">
+                <span className="vacationTileIcon">💰</span>
+                <span className="potExpansionTitle">
+                  <small>THIS WEEK</small>
+                  <b id="pot-title">Pot</b>
+                </span>
+                <strong>{"$" + (currentContributions.reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>
+                <button className="potExpansionClose" onClick={() => setShowPot(false)} aria-label="Close weekly pot">×</button>
+              </div>
+              <div className="potExpansionContent">
+                <p className="potExpansionIntro">Contributions are optional and never affect points. The pot locks after Sunday.</p>
+                <div className="potContributionBreakdown">
+                  {members.map(member => (
+                    <div className="potContributionRow" key={member.id}>
+                      <span>{member.displayName}</span>
+                      <strong>${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>
+                    </div>
+                  ))}
+                </div>
+                <label className="potContributionInput">
+                  <span>Add to the pot</span>
+                  <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
+                    value={potInput} onChange={event => setPotInput(event.target.value)} placeholder="Amount ($)" />
+                </label>
+                <button className="primary" onClick={() => void contributeToPot()}>Add to pot</button>
+                {potError && <p role="alert">{potError}</p>}
+                {allocationNotice && <p role="status">{allocationNotice}</p>}
+                <small className="potExpansionFootnote">This tracks pledges in the game; it does not transfer money.</small>
+              </div>
+            </section>
           </div>
         )}
         {showEnvelopes && (
