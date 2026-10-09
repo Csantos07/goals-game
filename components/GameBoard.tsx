@@ -792,12 +792,16 @@ export default function GameBoard({
     };
   }, [groupId, loadData, ready, supabase]);
 
-  async function persistBackgroundColors(nextThemeMode: ThemeMode, nextAccent: string) {
-    if (!selectedBackgroundId) return;
+  async function persistBackgroundColors(
+    nextThemeMode: ThemeMode,
+    nextAccent: string,
+    backgroundId = selectedBackgroundId
+  ) {
+    if (!backgroundId) return;
     const { error } = await supabase
       .from("user_backgrounds")
       .update({ theme_mode: nextThemeMode, accent: nextAccent })
-      .eq("id", selectedBackgroundId)
+      .eq("id", backgroundId)
       .eq("profile_id", currentUserId);
     if (error) {
       console.error("Could not save background colors.", error);
@@ -805,7 +809,7 @@ export default function GameBoard({
       return;
     }
     const update = (items: BackgroundTheme[]) => items.map(item =>
-      item.id === selectedBackgroundId ? { ...item, themeMode: nextThemeMode, accent: nextAccent } : item
+      item.id === backgroundId ? { ...item, themeMode: nextThemeMode, accent: nextAccent } : item
     );
     setBackgrounds(update);
     setPrivateBackgrounds(update);
