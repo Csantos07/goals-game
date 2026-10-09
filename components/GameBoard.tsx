@@ -555,6 +555,26 @@ export default function GameBoard({
           preferences?.selected_background_id ? backgroundRows[0]?.id ?? null : null
         );
       setLastPublicBackgroundId(fallbackId);
+
+      // A private theme stays selected in preferences so it can be revealed again,
+      // but a fresh session displays the public fallback. Restore that public
+      // background's paired colors too so private colors never leak into it.
+      const selectedIsPrivate = Boolean(preferences?.selected_background_id) &&
+        !backgroundRows.some(row => row.id === preferences?.selected_background_id);
+      const fallbackBackground = fallbackId
+        ? backgroundRows.find(row => row.id === fallbackId) ?? null
+        : null;
+      if (selectedIsPrivate && fallbackBackground) {
+        setThemeMode(
+          fallbackBackground.theme_mode === "light"
+            ? "light"
+            : fallbackBackground.theme_mode === "dark"
+              ? "dark"
+              : preferences?.theme_mode === "light" ? "light" : "dark"
+        );
+        setAccent(fallbackBackground.accent || preferences?.accent || "#c9ff54");
+      }
+
       if (typeof window !== "undefined") {
         if (fallbackId) window.localStorage.setItem(fallbackStorageKey, fallbackId);
         else if (storedFallbackId === "__default__" || !preferences?.selected_background_id) {
