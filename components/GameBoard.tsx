@@ -1155,7 +1155,7 @@ export default function GameBoard({
 
       const { data, error } = await supabase
         .from("user_backgrounds")
-        .select("id, name, data_url, is_private")
+        .select("id, name, data_url, is_private, theme_mode, accent")
         .eq("id", backgroundId)
         .eq("profile_id", currentUserId)
         .eq("is_private", true)
@@ -1167,7 +1167,9 @@ export default function GameBoard({
         id: data.id,
         name: data.name,
         dataUrl: data.data_url,
-        isPrivate: true
+        isPrivate: true,
+        themeMode: data.theme_mode === "light" ? "light" as ThemeMode : data.theme_mode === "dark" ? "dark" as ThemeMode : null,
+        accent: data.accent ?? null
       };
       setPrivateBackgrounds(current => current.some(item => item.id === background.id)
         ? current
