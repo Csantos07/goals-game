@@ -817,6 +817,20 @@ export default function GameBoard({
     const nextAccent = background.accent ?? accent;
     setThemeMode(nextThemeMode);
     setAccent(nextAccent);
+
+    if (background.isPrivate) {
+      // Selecting a private theme should display it immediately for this session.
+      // Keep the persisted selection so refresh can intentionally fall back to the
+      // last public theme until the title hold reveals this private theme again.
+      setPrivateThemeSessionEnabled(true);
+    } else {
+      setPrivateThemeSessionEnabled(false);
+      setLastPublicBackgroundId(background.id);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId, background.id);
+      }
+    }
+
     void persistPreferences({ selectedBackgroundId: background.id, themeMode: nextThemeMode, accent: nextAccent });
   }
 
