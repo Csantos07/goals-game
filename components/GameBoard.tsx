@@ -1206,9 +1206,13 @@ export default function GameBoard({
         accent: data.accent ?? null
       };
       setPrivateBackgrounds(current => current.some(item => item.id === background.id)
-        ? current
+        ? current.map(item => item.id === background.id ? background : item)
         : [...current, background]
       );
+      // Revealing a private theme must restore the colors paired with that
+      // background, not leave the public fallback's colors active.
+      if (background.themeMode) setThemeMode(background.themeMode);
+      if (background.accent) setAccent(background.accent);
       setPrivateThemeSessionEnabled(true);
     } catch (error) {
       console.warn("Could not reveal the selected private theme.", error);
