@@ -208,6 +208,9 @@ export default function GameBoard({
   const [showWeekResult, setShowWeekResult] = useState(false);
   const [potCents, setPotCents] = useState(0);
   const [potInput, setPotInput] = useState("");
+  const [editingContribution, setEditingContribution] = useState(false);
+  const [editedContributionAmount, setEditedContributionAmount] = useState("");
+  const [savingContribution, setSavingContribution] = useState(false);
   const [potError, setPotError] = useState("");
   const [allocating, setAllocating] = useState(false);
   const [allocatedCents, setAllocatedCents] = useState(0);
@@ -653,6 +656,29 @@ export default function GameBoard({
     setPotInput("");
     await loadCurrentPot();
     setAllocationNotice("Contribution saved for this week.");
+  }
+
+  async function saveEditedContribution() {
+    if (!weekId || savingContribution) return;
+    const amount = editedContributionAmount.trim();
+    const cents = Math.round(Number(amount) * 100);
+    if (!/^\d+(?:\.\d{1,2})?$/.test(amount) || !Number.isSafeInteger(cents) || cents < 0) {
+      setPotError("Enter a valid amount of $0 or more, with at most two decimal places.");
+      return;
+    }
+    setSavingContribution(true);
+    setPotError("");
+    const { error } = await supabase.rpc("set_weekly_contribution", {
+      target_week_id: weekId,
+      target_amount_cents: cents
+    });
+    if (error) setPotError("Could not update the pot. Check that the edit-pot SQL migration is installed.");
+    else {
+      await loadCurrentPot();
+      setEditingContribution(false);
+      setAllocationNotice("Your contribution was updated.");
+    }
+    setSavingContribution(false);
   }
 
   async function allocateWinnings() {
@@ -1582,9 +1608,28 @@ export default function GameBoard({
                     <div className="potContributionRow" key={member.id}>
                       <span>{member.displayName}</span>
                       <strong>${(currentContributions.filter(item => item.profile_id === member.id).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2)}</strong>
+                      {member.id === currentUserId && (
+                        <button type="button" onClick={() => {
+                          setEditedContributionAmount((currentContributions.filter(item => item.profile_id === currentUserId).reduce((sum, item) => sum + item.amount_cents, 0) / 100).toFixed(2));
+                          setEditingContribution(true);
+                          setPotError("");
+                        }}>Edit</button>
+                      )}
                     </div>
                   ))}
                 </div>
+                {editingContribution && (
+                  <div className="potContributionInput">
+                    <label htmlFor="edit-weekly-contribution">Set your total contribution ($)</label>
+                    <input id="edit-weekly-contribution" aria-label="New total contribution in dollars"
+                      type="number" min="0" step="0.01" value={editedContributionAmount}
+                      onChange={event => setEditedContributionAmount(event.target.value)} />
+                    <button type="button" disabled={savingContribution} onClick={() => void saveEditedContribution()}>
+                      {savingContribution ? "Saving..." : "Save contribution"}
+                    </button>
+                    <button type="button" disabled={savingContribution} onClick={() => setEditingContribution(false)}>Cancel</button>
+                  </div>
+                )}
                 <label className="potContributionInput">
                   <span>Add to the pot</span>
                   <input aria-label="Contribution in dollars" type="number" min="0.01" step="0.01"
