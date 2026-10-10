@@ -501,3 +501,215 @@ alter publication supabase_realtime add table public.goals;
 alter publication supabase_realtime add table public.goal_completions;
 alter publication supabase_realtime add table public.envelopes;
 alter publication supabase_realtime add table public.user_preferences;
+
+
+-- Weekly pot contributions and winner allocations.
+create table public.weekly_contributions (
+  id uuid primary key default gen_random_uuid(),
+  week_id uuid not null references public.weeks(id) on delete cascade,
+  profile_id uuid not null references public.profiles(id),
+  amount_cents bigint not null check (amount_cents > 0),
+  created_at timestamptz not null default now()
+);
+
+create table public.weekly_allocations (
+  id uuid primary key default gen_random_uuid(),
+  week_id uuid not null references public.weeks(id) on delete cascade,
+  profile_id uuid not null references public.profiles(id),
+  envelope_id uuid not null references public.envelopes(id),
+  amount_cents bigint not null check (amount_cents > 0),
+  created_at timestamptz not null default now(),
+  unique (week_id, profile_id)
+);
+
+create index weekly_contributions_week_id_idx on public.weekly_contributions(week_id);
+create index weekly_contributions_profile_id_idx on public.weekly_contributions(profile_id);
+create unique index weekly_allocations_one_settlement_per_week on public.weekly_allocations(week_id);
+create index weekly_allocations_profile_id_idx on public.weekly_allocations(profile_id);
+create index weekly_allocations_envelope_id_idx on public.weekly_allocations(envelope_id);
+
+alter table public.weekly_contributions enable row level security;
+alter table public.weekly_allocations enable row level security;
+
+grant select, insert on public.weekly_contributions to authenticated;
+grant select on public.weekly_allocations to authenticated;
+
+create policy "members read weekly contributions"
+on public.weekly_contributions for select
+to authenticated
+using (
+  exists (
+    select 1 from public.weeks w
+    where w.id = weekly_contributions.week_id
+      and private.is_group_member(w.group_id)
+  )
+);
+
+create policy "members contribute to current week"
+on public.weekly_contributions for insert
+to authenticated
+with check (
+  profile_id = (select auth.uid())
+  and exists (
+    select 1 from public.weeks w
+    where w.id = weekly_contributions.week_id
+      and private.is_group_member(w.group_id)
+      and w.starts_on <= (now() at time zone 'America/Chicago')::date
+      and w.ends_on >= (now() at time zone 'America/Chicago')::date
+      and w.status = 'active'
+  )
+);
+
+create policy "members read weekly allocations"
+on public.weekly_allocations for select
+to authenticated
+using (
+  exists (
+    select 1 from public.weeks w
+    where w.id = weekly_allocations.week_id
+      and private.is_group_member(w.group_id)
+  )
+);
+
+create or replace function private.allocate_weekly_winnings_impl(
+  target_week_id uuid,
+  target_envelope_name text
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  w public.weeks%rowtype;
+  top_score bigint;
+  winner_count bigint;
+  winner_id uuid;
+  total_pot bigint;
+  target_id uuid;
+begin
+  if (select auth.uid()) is null then
+    raise exception 'You must be signed in.';
+  end if;
+
+  select * into w
+    from public.weeks
+   where id = target_week_id
+   for update;
+
+  if not found or not private.is_group_member(w.group_id) then
+    raise exception 'Week not found.';
+  end if;
+
+  if w.ends_on >= (now() at time zone 'America/Chicago')::date then
+    raise exception 'Week has not ended.';
+  end if;
+
+  if exists (select 1 from public.weekly_allocations where week_id = w.id) then
+    raise exception 'This week has already been allocated.';
+  end if;
+
+  with scores as (
+    select gm.profile_id,
+      coalesce(sum(
+        case
+          when g.goal_type = 'oneTime' then
+            case when g.completed_at is null then 0 else g.points end
+          else g.points * (
+            select count(*) from public.goal_completions gc
+            where gc.goal_id = g.id
+              and gc.completed_on between w.starts_on and w.ends_on
+          )
+        end
+      ), 0)::bigint as score
+    from public.group_members gm
+    left join public.goals g
+      on g.player_id = gm.profile_id and g.week_id = w.id
+    where gm.group_id = w.group_id
+    group by gm.profile_id
+  )
+  select max(score) into top_score from scores;
+
+  with scores as (
+    select gm.profile_id,
+      coalesce(sum(
+        case
+          when g.goal_type = 'oneTime' then
+            case when g.completed_at is null then 0 else g.points end
+          else g.points * (
+            select count(*) from public.goal_completions gc
+            where gc.goal_id = g.id
+              and gc.completed_on between w.starts_on and w.ends_on
+          )
+        end
+      ), 0)::bigint as score
+    from public.group_members gm
+    left join public.goals g
+      on g.player_id = gm.profile_id and g.week_id = w.id
+    where gm.group_id = w.group_id
+    group by gm.profile_id
+  )
+  select count(*), (array_agg(profile_id order by profile_id))[1]
+    into winner_count, winner_id
+    from scores
+   where score = top_score;
+
+  if winner_count <> 1 then
+    raise exception 'Tied week; the pot remains unassigned.';
+  end if;
+
+  if winner_id is distinct from (select auth.uid()) then
+    raise exception 'Only the winning player can allocate the pot.';
+  end if;
+
+  select coalesce(sum(amount_cents), 0)
+    into total_pot
+    from public.weekly_contributions
+   where week_id = w.id;
+
+  if total_pot <= 0 then
+    raise exception 'There is no pot to allocate.';
+  end if;
+
+  select id into target_id
+    from public.envelopes
+   where group_id = w.group_id
+     and name = target_envelope_name
+   for update;
+
+  if target_id is null then
+    raise exception 'Envelope not found.';
+  end if;
+
+  insert into public.weekly_allocations (week_id, profile_id, envelope_id, amount_cents)
+  values (w.id, winner_id, target_id, total_pot);
+
+  update public.envelopes
+     set balance_cents = balance_cents + total_pot,
+         updated_at = now()
+   where id = target_id;
+
+  return total_pot;
+end;
+$function$;
+
+revoke all on function private.allocate_weekly_winnings_impl(uuid, text) from public, anon;
+grant execute on function private.allocate_weekly_winnings_impl(uuid, text) to authenticated;
+
+create or replace function public.allocate_weekly_winnings(
+  target_week_id uuid,
+  target_envelope_name text
+)
+returns bigint
+language sql
+security invoker
+set search_path = ''
+as $function$
+  select private.allocate_weekly_winnings_impl(target_week_id, target_envelope_name)
+$function$;
+
+revoke all on function public.allocate_weekly_winnings(uuid, text) from public, anon;
+grant execute on function public.allocate_weekly_winnings(uuid, text) to authenticated;
+
+alter publication supabase_realtime add table public.weekly_contributions;
+alter publication supabase_realtime add table public.weekly_allocations;
