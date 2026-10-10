@@ -188,7 +188,6 @@ export default function GameBoard({
   const weekLabel = useMemo(() => getWeekLabel(weekStart), [weekStart]);
   const today = getCurrentDayKey();
   const isSunday = new Date().getDay() === 0;
-  const isMonday = new Date().getDay() === 1;
   const migrationAttempted = useRef(false);
   const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const privateThemeRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -638,10 +637,9 @@ export default function GameBoard({
   useEffect(() => { void loadCurrentPot(); }, [loadCurrentPot]);
 
   const loadSettlement = useCallback(async () => {
-    if (!isMonday) return;
     const { data: previous, error: previousError } = await supabase.from("weeks")
       .select("id").eq("group_id", groupId).eq("starts_on", settlementWeekStart).maybeSingle();
-    if (previousError || !previous) return;
+    if (previousError || !previous) { settlementWeekId.current = null; setPotReady(false); return; }
     settlementWeekId.current = previous.id;
     const [goalResponse, contributionResponse, allocationResponse] = await Promise.all([
       supabase.from("goals").select("id, player_id, goal_type, points, completed_at").eq("week_id", previous.id),
@@ -671,7 +669,7 @@ export default function GameBoard({
     setAllocatedCents((allocationResponse.data ?? []).filter(row => row.profile_id === currentUserId)
       .reduce((sum, row) => sum + row.amount_cents, 0));
     setPotReady(true);
-  }, [currentUserId, groupId, isMonday, members, settlementWeekStart, supabase]);
+  }, [currentUserId, groupId, members, settlementWeekStart, supabase]);
 
   useEffect(() => { void loadSettlement(); }, [loadSettlement]);
 
@@ -769,21 +767,23 @@ export default function GameBoard({
   }, [showMenu]);
 
   useEffect(() => {
-    if (!ready || !isMonday) return;
-    const previousWeek = addDays(weekStart, -7);
+    if (!ready || !potReady || !settlementWeekId.current) return;
+    const previousWeek = settlementWeekStart;
     if (lastCelebratedWeek === previousWeek) return;
     setShowWeekResult(true);
     setLastCelebratedWeek(previousWeek);
     void persistPreferences({ lastCelebratedWeek: previousWeek });
-  // This should run once when the real Monday begins, not on every render.
+  // Keep an unsettled result available after Monday if the user misses that day.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, isMonday, lastCelebratedWeek, weekStart]);
+  }, [ready, potReady, lastCelebratedWeek, settlementWeekStart]);
 
   useEffect(() => {
     if (!ready) return;
 
     const refresh = () => {
       void loadData(false);
+      void loadCurrentPot();
+      void loadSettlement();
     };
 
     const channel = supabase
@@ -791,13 +791,15 @@ export default function GameBoard({
       .on("postgres_changes", { event: "*", schema: "public", table: "goals" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "goal_completions" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "envelopes" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "weekly_contributions" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "weekly_allocations" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "user_preferences" }, refresh)
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [groupId, loadData, ready, supabase]);
+  }, [groupId, loadCurrentPot, loadData, loadSettlement, ready, supabase]);
 
   async function persistBackgroundColors(
     nextThemeMode: ThemeMode,
@@ -1602,9 +1604,9 @@ export default function GameBoard({
               {potReady && (
                 <div style={{ padding: 16, marginBottom: 16, border: "1px solid currentColor", borderRadius: 12 }}>
                   <p>Weekly pot: <strong>${(potCents / 100).toFixed(2)}</strong></p>
-                  <p>{settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " won!" : "Tie — the pot is split evenly."}</p>
+                  <p>{settlementLeaders.length === 1 ? settlementLeaders[0].displayName + " won!" : "Tie — the pot remains unassigned."}</p>
                   {settlementLeaders.map(member => <p key={member.id}>{member.displayName}: {settlementScores.get(member.id) ?? 0} points</p>)}
-                  {settlementLeaders.some(member => member.id === currentUserId) && potCents > 0 && (
+                  {settlementLeaders.length === 1 && settlementLeaders[0].id === currentUserId && potCents > 0 && (
                     <button className="weekResultContinue" disabled={allocating || allocatedCents > 0}
                       onClick={() => void allocateWinnings()}>
                       {allocatedCents > 0 ? "Your winnings are allocated" : allocating ? "Allocating…" : "Assign my winnings to Vacation"}
@@ -1702,7 +1704,7 @@ export default function GameBoard({
           <p className="motivate">One-time goals are worth 50. Daily goals earn 10 each completed day.</p>
         </section>
 
-        {isMonday && (
+        {potReady && (
           <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
             🏁 View last week&apos;s result
           </button>
