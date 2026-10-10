@@ -235,6 +235,8 @@ export default function GameBoard({
   const [lastCelebratedWeek, setLastCelebratedWeek] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState("");
   const [syncError, setSyncError] = useState("");
+  const [themeDraftDirty, setThemeDraftDirty] = useState(false);
+  const [savingTheme, setSavingTheme] = useState(false);
   const [ready, setReady] = useState(false);
 
   const memberById = useMemo(
@@ -835,7 +837,23 @@ export default function GameBoard({
       }
     }
 
+    setThemeDraftDirty(false);
     void persistPreferences({ selectedBackgroundId: background.id, themeMode: nextThemeMode, accent: nextAccent });
+  }
+
+  async function saveSelectedTheme() {
+    setSavingTheme(true);
+    setSyncError("");
+    try {
+      await persistPreferences({ themeMode, accent, selectedBackgroundId });
+      if (selectedBackgroundId) await persistBackgroundColors(themeMode, accent, selectedBackgroundId);
+      setThemeDraftDirty(false);
+    } catch (error) {
+      console.error("Could not save theme.", error);
+      setSyncError("Could not save that theme.");
+    } finally {
+      setSavingTheme(false);
+    }
   }
 
   async function persistPreferences(overrides: {
@@ -1357,8 +1375,7 @@ export default function GameBoard({
                   className={themeMode === "dark" ? "selected" : ""}
                   onClick={() => {
                     setThemeMode("dark");
-                    void persistPreferences({ themeMode: "dark" });
-                    void persistBackgroundColors("dark", accent);
+                    setThemeDraftDirty(true);
                   }}
                 >
                   Dark
@@ -1367,8 +1384,7 @@ export default function GameBoard({
                   className={themeMode === "light" ? "selected" : ""}
                   onClick={() => {
                     setThemeMode("light");
-                    void persistPreferences({ themeMode: "light" });
-                    void persistBackgroundColors("light", accent);
+                    setThemeDraftDirty(true);
                   }}
                 >
                   Light
@@ -1383,8 +1399,7 @@ export default function GameBoard({
                     style={{ background: color }}
                     onClick={() => {
                       setAccent(color);
-                      void persistPreferences({ accent: color });
-                      void persistBackgroundColors(themeMode, color);
+                      setThemeDraftDirty(true);
                     }}
                     aria-label={"Use " + color + " accent"}
                   />
@@ -1396,12 +1411,22 @@ export default function GameBoard({
                     onChange={event => {
                       const nextAccent = event.target.value;
                       setAccent(nextAccent);
-                      void persistPreferences({ accent: nextAccent });
-                      void persistBackgroundColors(themeMode, nextAccent);
+                      setThemeDraftDirty(true);
                     }}
                   />
                   <span>Custom</span>
                 </label>
+              </div>
+
+              <div className="backgroundActions">
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={savingTheme || !themeDraftDirty}
+                  onClick={() => void saveSelectedTheme()}
+                >
+                  {savingTheme ? "Saving theme…" : themeDraftDirty ? "Save Theme" : "Theme saved"}
+                </button>
               </div>
 
               <div className="backgroundSettings">
