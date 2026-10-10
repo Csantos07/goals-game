@@ -19,6 +19,8 @@ type BackgroundTheme = {
   name: string;
   dataUrl: string;
   isPrivate: boolean;
+  themeMode: ThemeMode | null;
+  accent: string | null;
 };
 
 type Goal = {
@@ -190,6 +192,7 @@ export default function GameBoard({
   const migrationAttempted = useRef(false);
   const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const privateThemeRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const privateThemeEditingRef = useRef(false);
 
   const [weekId, setWeekId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -233,6 +236,8 @@ export default function GameBoard({
   const [lastCelebratedWeek, setLastCelebratedWeek] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState("");
   const [syncError, setSyncError] = useState("");
+  const [themeDraftDirty, setThemeDraftDirty] = useState(false);
+  const [savingTheme, setSavingTheme] = useState(false);
   const [ready, setReady] = useState(false);
 
   const memberById = useMemo(
@@ -442,10 +447,10 @@ export default function GameBoard({
           .maybeSingle()
       ]);
 
-      let backgroundRows: Array<{ id: string; name: string; data_url: string; is_private?: boolean }> = [];
+      let backgroundRows: Array<{ id: string; name: string; data_url: string; is_private?: boolean; theme_mode?: string | null; accent?: string | null }> = [];
       const privateBackgroundResult = await supabase
         .from("user_backgrounds")
-        .select("id, name, data_url, is_private, created_at")
+        .select("id, name, data_url, is_private, theme_mode, accent, created_at")
         .eq("profile_id", currentUserId)
         .eq("is_private", false)
         .order("created_at", { ascending: true });
@@ -522,8 +527,12 @@ export default function GameBoard({
 
       const preferences = preferenceResult.data;
       if (preferences) {
-        setThemeMode(preferences.theme_mode === "light" ? "light" : "dark");
-        setAccent(preferences.accent || "#c9ff54");
+        // While a private theme is open for editing, realtime preference refreshes
+        // must not repaint it with the public fallback colors.
+        if (!privateThemeEditingRef.current) {
+          setThemeMode(preferences.theme_mode === "light" ? "light" : "dark");
+          setAccent(preferences.accent || "#c9ff54");
+        }
         setActiveProfileId(
           preferences.active_profile_id && memberById.has(preferences.active_profile_id)
             ? preferences.active_profile_id
@@ -553,6 +562,26 @@ export default function GameBoard({
           preferences?.selected_background_id ? backgroundRows[0]?.id ?? null : null
         );
       setLastPublicBackgroundId(fallbackId);
+
+      // A private theme stays selected in preferences so it can be revealed again,
+      // but a fresh session displays the public fallback. Restore that public
+      // background's paired colors too so private colors never leak into it.
+      const selectedIsPrivate = Boolean(preferences?.selected_background_id) &&
+        !backgroundRows.some(row => row.id === preferences?.selected_background_id);
+      const fallbackBackground = fallbackId
+        ? backgroundRows.find(row => row.id === fallbackId) ?? null
+        : null;
+      if (selectedIsPrivate && fallbackBackground && !privateThemeEditingRef.current) {
+        setThemeMode(
+          fallbackBackground.theme_mode === "light"
+            ? "light"
+            : fallbackBackground.theme_mode === "dark"
+              ? "dark"
+              : preferences?.theme_mode === "light" ? "light" : "dark"
+        );
+        setAccent(fallbackBackground.accent || preferences?.accent || "#c9ff54");
+      }
+
       if (typeof window !== "undefined") {
         if (fallbackId) window.localStorage.setItem(fallbackStorageKey, fallbackId);
         else if (storedFallbackId === "__default__" || !preferences?.selected_background_id) {
@@ -564,7 +593,9 @@ export default function GameBoard({
         id: row.id,
         name: row.name,
         dataUrl: row.data_url,
-        isPrivate: false
+        isPrivate: false,
+        themeMode: row.theme_mode === "light" ? "light" : row.theme_mode === "dark" ? "dark" : null,
+        accent: row.accent ?? null
       })));
 
       if (envelopeResult.data) {
@@ -767,6 +798,74 @@ export default function GameBoard({
       void supabase.removeChannel(channel);
     };
   }, [groupId, loadData, ready, supabase]);
+
+  async function persistBackgroundColors(
+    nextThemeMode: ThemeMode,
+    nextAccent: string,
+    backgroundId = selectedBackgroundId
+  ) {
+    if (!backgroundId) return;
+    const { error } = await supabase
+      .from("user_backgrounds")
+      .update({ theme_mode: nextThemeMode, accent: nextAccent })
+      .eq("id", backgroundId)
+      .eq("profile_id", currentUserId);
+    if (error) {
+      console.error("Could not save background colors.", error);
+      setSyncError("Could not save that theme combination.");
+      return;
+    }
+    const update = (items: BackgroundTheme[]) => items.map(item =>
+      item.id === backgroundId ? { ...item, themeMode: nextThemeMode, accent: nextAccent } : item
+    );
+    setBackgrounds(update);
+    setPrivateBackgrounds(update);
+  }
+
+  function applyBackgroundTheme(background: BackgroundTheme) {
+    setSelectedBackgroundId(background.id);
+    const nextThemeMode = background.themeMode ?? themeMode;
+    const nextAccent = background.accent ?? accent;
+    setThemeMode(nextThemeMode);
+    setAccent(nextAccent);
+
+    if (background.isPrivate) {
+      // Selecting a private theme should display it immediately for this session.
+      // Mark the edit session before persistence triggers a realtime reload so the
+      // public fallback cannot overwrite the draft colors.
+      privateThemeEditingRef.current = true;
+      // Keep the persisted selection so refresh can intentionally fall back to the
+      // last public theme until the title hold reveals this private theme again.
+      setPrivateThemeSessionEnabled(true);
+    } else {
+      privateThemeEditingRef.current = false;
+      setPrivateThemeSessionEnabled(false);
+      setLastPublicBackgroundId(background.id);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId, background.id);
+      }
+    }
+
+    setThemeDraftDirty(false);
+    void persistPreferences({ selectedBackgroundId: background.id, themeMode: nextThemeMode, accent: nextAccent });
+  }
+
+  async function saveSelectedTheme() {
+    setSavingTheme(true);
+    setSyncError("");
+    try {
+      await persistPreferences({ themeMode, accent, selectedBackgroundId });
+      if (selectedBackgroundId) await persistBackgroundColors(themeMode, accent, selectedBackgroundId);
+      setThemeDraftDirty(false);
+      // Keep the guard active for a selected private theme; the user may continue
+      // editing after saving. It is cleared when a public/default theme is chosen.
+    } catch (error) {
+      console.error("Could not save theme.", error);
+      setSyncError("Could not save that theme.");
+    } finally {
+      setSavingTheme(false);
+    }
+  }
 
   async function persistPreferences(overrides: {
     themeMode?: ThemeMode;
@@ -1003,15 +1102,17 @@ export default function GameBoard({
       if (privateThemesSchemaReady) {
         const { data, error } = await supabase
           .from("user_backgrounds")
-          .insert({ profile_id: currentUserId, name, data_url: dataUrl, is_private: isPrivate })
-          .select("id, name, data_url, is_private")
+          .insert({ profile_id: currentUserId, name, data_url: dataUrl, is_private: isPrivate, theme_mode: themeMode, accent })
+          .select("id, name, data_url, is_private, theme_mode, accent")
           .single();
         if (error) throw error;
         nextBackground = {
           id: data.id,
           name: data.name,
           dataUrl: data.data_url,
-          isPrivate: Boolean(data.is_private)
+          isPrivate: Boolean(data.is_private),
+          themeMode: data.theme_mode === "light" ? "light" : data.theme_mode === "dark" ? "dark" : null,
+          accent: data.accent ?? null
         };
       } else {
         const { data, error } = await supabase
@@ -1020,7 +1121,7 @@ export default function GameBoard({
           .select("id, name, data_url")
           .single();
         if (error) throw error;
-        nextBackground = { id: data.id, name: data.name, dataUrl: data.data_url, isPrivate: false };
+        nextBackground = { id: data.id, name: data.name, dataUrl: data.data_url, isPrivate: false, themeMode: null, accent: null };
       }
 
       if (nextBackground.isPrivate) {
@@ -1080,7 +1181,7 @@ export default function GameBoard({
 
       const { data, error } = await supabase
         .from("user_backgrounds")
-        .select("id, name, data_url, is_private")
+        .select("id, name, data_url, is_private, theme_mode, accent")
         .eq("profile_id", currentUserId)
         .eq("is_private", true)
         .order("created_at", { ascending: true });
@@ -1090,7 +1191,9 @@ export default function GameBoard({
         id: row.id,
         name: row.name,
         dataUrl: row.data_url,
-        isPrivate: true
+        isPrivate: true,
+        themeMode: row.theme_mode === "light" ? "light" : row.theme_mode === "dark" ? "dark" : null,
+        accent: row.accent ?? null
       })));
       setPrivateThemesUnlocked(true);
     } catch (error) {
@@ -1119,7 +1222,7 @@ export default function GameBoard({
 
       const { data, error } = await supabase
         .from("user_backgrounds")
-        .select("id, name, data_url, is_private")
+        .select("id, name, data_url, is_private, theme_mode, accent")
         .eq("id", backgroundId)
         .eq("profile_id", currentUserId)
         .eq("is_private", true)
@@ -1131,12 +1234,18 @@ export default function GameBoard({
         id: data.id,
         name: data.name,
         dataUrl: data.data_url,
-        isPrivate: true
+        isPrivate: true,
+        themeMode: data.theme_mode === "light" ? "light" as ThemeMode : data.theme_mode === "dark" ? "dark" as ThemeMode : null,
+        accent: data.accent ?? null
       };
       setPrivateBackgrounds(current => current.some(item => item.id === background.id)
-        ? current
+        ? current.map(item => item.id === background.id ? background : item)
         : [...current, background]
       );
+      // Revealing a private theme must restore the colors paired with that
+      // background, not leave the public fallback's colors active.
+      if (background.themeMode) setThemeMode(background.themeMode);
+      if (background.accent) setAccent(background.accent);
       setPrivateThemeSessionEnabled(true);
     } catch (error) {
       console.warn("Could not reveal the selected private theme.", error);
@@ -1277,7 +1386,7 @@ export default function GameBoard({
                   className={themeMode === "dark" ? "selected" : ""}
                   onClick={() => {
                     setThemeMode("dark");
-                    void persistPreferences({ themeMode: "dark" });
+                    setThemeDraftDirty(true);
                   }}
                 >
                   Dark
@@ -1286,7 +1395,7 @@ export default function GameBoard({
                   className={themeMode === "light" ? "selected" : ""}
                   onClick={() => {
                     setThemeMode("light");
-                    void persistPreferences({ themeMode: "light" });
+                    setThemeDraftDirty(true);
                   }}
                 >
                   Light
@@ -1301,7 +1410,7 @@ export default function GameBoard({
                     style={{ background: color }}
                     onClick={() => {
                       setAccent(color);
-                      void persistPreferences({ accent: color });
+                      setThemeDraftDirty(true);
                     }}
                     aria-label={"Use " + color + " accent"}
                   />
@@ -1313,11 +1422,22 @@ export default function GameBoard({
                     onChange={event => {
                       const nextAccent = event.target.value;
                       setAccent(nextAccent);
-                      void persistPreferences({ accent: nextAccent });
+                      setThemeDraftDirty(true);
                     }}
                   />
                   <span>Custom</span>
                 </label>
+              </div>
+
+              <div className="backgroundActions">
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={savingTheme || !themeDraftDirty}
+                  onClick={() => void saveSelectedTheme()}
+                >
+                  {savingTheme ? "Saving theme…" : themeDraftDirty ? "Save Theme" : "Theme saved"}
+                </button>
               </div>
 
               <div className="backgroundSettings">
@@ -1339,6 +1459,7 @@ export default function GameBoard({
                   <button
                     className={"backgroundTheme defaultBackground " + (selectedBackgroundId === null || (selectedBackgroundIsPrivate && !privateThemesUnlocked) ? "selected" : "")}
                     onClick={() => {
+                      privateThemeEditingRef.current = false;
                       setSelectedBackgroundId(null);
                       setLastPublicBackgroundId(null);
                       window.localStorage.setItem(LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId, "__default__");
@@ -1356,11 +1477,10 @@ export default function GameBoard({
                       className={"backgroundTheme " + (selectedBackgroundId === background.id ? "selected" : "")}
                       style={{ backgroundImage: "url(" + background.dataUrl + ")" }}
                       onClick={() => {
-                        setSelectedBackgroundId(background.id);
+                        applyBackgroundTheme(background);
                         setLastPublicBackgroundId(background.id);
                         window.localStorage.setItem(LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId, background.id);
                         setBackgroundError("");
-                        void persistPreferences({ selectedBackgroundId: background.id });
                       }}
                       aria-pressed={selectedBackgroundId === background.id}
                       title={background.name}
@@ -1413,9 +1533,8 @@ export default function GameBoard({
                             className={"backgroundTheme " + (selectedBackgroundId === background.id ? "selected" : "")}
                             style={{ backgroundImage: "url(" + background.dataUrl + ")" }}
                             onClick={() => {
-                              setSelectedBackgroundId(background.id);
+                              applyBackgroundTheme(background);
                               setBackgroundError("");
-                              void persistPreferences({ selectedBackgroundId: background.id });
                             }}
                             aria-pressed={selectedBackgroundId === background.id}
                             title={background.name}
