@@ -192,6 +192,7 @@ export default function GameBoard({
   const migrationAttempted = useRef(false);
   const privateThemesHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const privateThemeRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const privateThemeEditingRef = useRef(false);
 
   const [weekId, setWeekId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -526,8 +527,12 @@ export default function GameBoard({
 
       const preferences = preferenceResult.data;
       if (preferences) {
-        setThemeMode(preferences.theme_mode === "light" ? "light" : "dark");
-        setAccent(preferences.accent || "#c9ff54");
+        // While a private theme is open for editing, realtime preference refreshes
+        // must not repaint it with the public fallback colors.
+        if (!privateThemeEditingRef.current) {
+          setThemeMode(preferences.theme_mode === "light" ? "light" : "dark");
+          setAccent(preferences.accent || "#c9ff54");
+        }
         setActiveProfileId(
           preferences.active_profile_id && memberById.has(preferences.active_profile_id)
             ? preferences.active_profile_id
@@ -566,7 +571,7 @@ export default function GameBoard({
       const fallbackBackground = fallbackId
         ? backgroundRows.find(row => row.id === fallbackId) ?? null
         : null;
-      if (selectedIsPrivate && fallbackBackground) {
+      if (selectedIsPrivate && fallbackBackground && !privateThemeEditingRef.current) {
         setThemeMode(
           fallbackBackground.theme_mode === "light"
             ? "light"
@@ -826,10 +831,14 @@ export default function GameBoard({
 
     if (background.isPrivate) {
       // Selecting a private theme should display it immediately for this session.
+      // Mark the edit session before persistence triggers a realtime reload so the
+      // public fallback cannot overwrite the draft colors.
+      privateThemeEditingRef.current = true;
       // Keep the persisted selection so refresh can intentionally fall back to the
       // last public theme until the title hold reveals this private theme again.
       setPrivateThemeSessionEnabled(true);
     } else {
+      privateThemeEditingRef.current = false;
       setPrivateThemeSessionEnabled(false);
       setLastPublicBackgroundId(background.id);
       if (typeof window !== "undefined") {
@@ -848,6 +857,8 @@ export default function GameBoard({
       await persistPreferences({ themeMode, accent, selectedBackgroundId });
       if (selectedBackgroundId) await persistBackgroundColors(themeMode, accent, selectedBackgroundId);
       setThemeDraftDirty(false);
+      // Keep the guard active for a selected private theme; the user may continue
+      // editing after saving. It is cleared when a public/default theme is chosen.
     } catch (error) {
       console.error("Could not save theme.", error);
       setSyncError("Could not save that theme.");
@@ -1448,6 +1459,7 @@ export default function GameBoard({
                   <button
                     className={"backgroundTheme defaultBackground " + (selectedBackgroundId === null || (selectedBackgroundIsPrivate && !privateThemesUnlocked) ? "selected" : "")}
                     onClick={() => {
+                      privateThemeEditingRef.current = false;
                       setSelectedBackgroundId(null);
                       setLastPublicBackgroundId(null);
                       window.localStorage.setItem(LAST_PUBLIC_BACKGROUND_KEY + ":" + currentUserId, "__default__");
