@@ -1641,12 +1641,23 @@ export default function GameBoard({
                   {settlementLeaders.length === 1 && settlementLeaders[0].id === currentUserId && potCents > 0 && (
                     <>
                       {allocatedCents === 0 && (
-                        <label>
-                          Choose an envelope
-                          <select value={selectedEnvelopeName} onChange={event => setSelectedEnvelopeName(event.target.value)}>
-                            {envelopes.map(envelope => <option key={envelope.id} value={envelope.name}>{envelope.name}</option>)}
-                          </select>
-                        </label>
+                        <div className="envelopeChoices" role="group" aria-label="Choose an envelope">
+                          <p>Choose an envelope</p>
+                          <div className="envelopeChoiceGrid">
+                            {envelopes.map(envelope => (
+                              <button
+                                key={envelope.id}
+                                type="button"
+                                className={"envelopeChoice " + (selectedEnvelopeName === envelope.name ? "selected" : "")}
+                                aria-pressed={selectedEnvelopeName === envelope.name}
+                                onClick={() => setSelectedEnvelopeName(envelope.name)}
+                              >
+                                <span>{envelope.name}</span>
+                                <small>{"$" + (envelope.balance_cents / 100).toLocaleString()}</small>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       <button className="weekResultContinue" disabled={allocating || allocatedCents > 0 || !selectedEnvelopeName}
                         onClick={() => void allocateWinnings()}>
