@@ -1641,23 +1641,23 @@ export default function GameBoard({
                   {settlementLeaders.length === 1 && settlementLeaders[0].id === currentUserId && potCents > 0 && (
                     <>
                       {allocatedCents === 0 && (
-                        <div className="envelopeChoices" role="group" aria-label="Choose an envelope">
-                          <p>Choose an envelope</p>
-                          <div className="envelopeChoiceGrid">
-                            {envelopes.map(envelope => (
-                              <button
-                                key={envelope.id}
-                                type="button"
-                                className={"envelopeChoice " + (selectedEnvelopeName === envelope.name ? "selected" : "")}
-                                aria-pressed={selectedEnvelopeName === envelope.name}
-                                onClick={() => setSelectedEnvelopeName(envelope.name)}
-                              >
-                                <span>{envelope.name}</span>
-                                <small>{"$" + (envelope.balance_cents / 100).toLocaleString()}</small>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        <label className="envelopeChoices">
+                          <span>Choose an envelope</span>
+                          <span className="envelopeSelectWrap">
+                            <select
+                              className="envelopeSelect"
+                              value={selectedEnvelopeName}
+                              onChange={event => setSelectedEnvelopeName(event.target.value)}
+                            >
+                              {envelopes.map(envelope => (
+                                <option key={envelope.id} value={envelope.name}>
+                                  {envelope.name} · {"$" + (envelope.balance_cents / 100).toLocaleString()}
+                                </option>
+                              ))}
+                            </select>
+                            <span aria-hidden="true">⌄</span>
+                          </span>
+                        </label>
                       )}
                       <button className="weekResultContinue" disabled={allocating || allocatedCents > 0 || !selectedEnvelopeName}
                         onClick={() => void allocateWinnings()}>
