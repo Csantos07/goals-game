@@ -591,3 +591,46 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .envelopeSelect:focus-visible{outline:2px solid var(--accent-contrast);outline-offset:2px}
 .envelopeSelect option{background:#17191d;color:#fff}
 .envelopeSelectWrap>span{position:absolute;top:50%;right:14px;transform:translateY(-50%);pointer-events:none;color:var(--accent-contrast);font-size:20px;line-height:1}
+
+.plannerLaunch{display:block;width:min(560px,calc(100% - 32px));margin:0 auto 18px;padding:14px 18px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,var(--card),var(--card2));color:var(--text);font:inherit;font-weight:800;cursor:pointer;transition:transform .18s,border-color .18s}
+.plannerLaunch:hover{transform:translateY(-1px);border-color:var(--accent)}
+.weeklyPlanner{position:fixed;inset:0;z-index:60;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);color:var(--text);padding:max(18px,env(safe-area-inset-top)) 18px max(30px,env(safe-area-inset-bottom))}
+.weeklyPlannerInner{width:min(840px,100%);margin:0 auto}
+.plannerBack{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;padding:8px 0;cursor:pointer}
+.plannerHeader{padding:18px 0 8px}
+.plannerHeader h2{font-size:clamp(30px,7vw,46px);line-height:1.03;letter-spacing:-.045em;margin:8px 0 10px}
+.plannerHeader>p:last-child{color:var(--muted);line-height:1.5;margin:0 0 18px}
+.plannerNotice{padding:13px 15px;margin:14px 0;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:14px;background:color-mix(in srgb,var(--accent) 10%,var(--card));color:var(--text);line-height:1.45}
+.plannerIdeaForm{margin:12px 0 22px;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
+.plannerIdeaForm>label{display:block;margin-bottom:9px;font-size:13px;font-weight:800}
+.plannerIdeaForm>div{display:flex;gap:9px}
+.plannerIdeaForm input,.plannerDraft input:not([type=checkbox]),.plannerDraft select,.plannerFields input,.plannerFields select{min-width:0;width:100%;border:1px solid var(--line);border-radius:12px;background:var(--input);color:var(--text);font:inherit}
+.plannerIdeaForm input{padding:12px 13px;flex:1}
+.plannerIdeaForm button,.plannerSecondary,.plannerStart{border:0;border-radius:12px;background:var(--accent);color:var(--accent-contrast);font:inherit;font-weight:800;cursor:pointer}
+.plannerIdeaForm button{padding:0 15px}
+.plannerIdeaForm button:disabled,.plannerSecondary:disabled,.plannerStart:disabled{opacity:.45;cursor:not-allowed}
+.plannerSection{margin:18px 0;padding:16px;border:1px solid var(--line);border-radius:20px;background:var(--card)}
+.plannerSectionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.plannerSectionHead h3{font-size:20px;margin:0 0 4px}
+.plannerSectionHead p{color:var(--muted);font-size:13px;line-height:1.4;margin:0}
+.plannerSectionHead>span{flex:none;padding:6px 9px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:11px;font-weight:800}
+.plannerEmpty,.plannerLoading{padding:15px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);font-size:13px;line-height:1.45}
+.plannerList,.plannerDraftList{list-style:none;padding:0;margin:0;display:grid;gap:9px}
+.plannerIdea{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid var(--line);border-radius:14px;background:var(--card2)}
+.plannerIdea>input,.plannerDraftTop>input{padding:10px 11px}
+.plannerSecondary{flex:none;padding:10px 12px;font-size:12px}
+.plannerRemove{width:34px;height:34px;flex:none;border:0;border-radius:10px;background:var(--soft);color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+.plannerRemove:disabled{opacity:.4;cursor:not-allowed}
+.plannerDraft{padding:13px;border:1px solid var(--line);border-radius:16px;background:var(--card2)}
+.plannerDraftTop{display:flex;align-items:center;gap:8px}
+.plannerDraftTop>input{flex:1}
+.plannerSelected{display:flex;align-items:center;gap:6px;flex:none;color:var(--muted);font-size:12px;font-weight:800}
+.plannerSelected input{accent-color:var(--accent)}
+.plannerFields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:11px}
+.plannerFields label{display:grid;gap:5px;color:var(--muted);font-size:11px;font-weight:800}
+.plannerFields select,.plannerFields input{padding:9px 10px;font-size:13px}
+.plannerError{padding:12px 14px;border-radius:12px;background:rgba(255,90,90,.12);color:#c33;font-size:13px}
+.plannerFooter{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 max(10px,env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(18px);border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+.plannerStart{flex:none;padding:13px 16px;font-size:14px}
+@media(max-width:640px){.weeklyPlanner{padding-left:14px;padding-right:14px}.plannerSection{padding:13px}.plannerIdeaForm>div{display:grid}.plannerIdeaForm button{padding:12px}.plannerFields{grid-template-columns:repeat(2,minmax(0,1fr))}.plannerFooter{align-items:stretch;flex-direction:column}.plannerStart{width:100%}.plannerIdea{align-items:stretch;flex-wrap:wrap}.plannerIdea>input{width:100%;flex:1 1 calc(100% - 45px)}}
+@media(prefers-reduced-motion:reduce){.plannerLaunch{transition:none}}
