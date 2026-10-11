@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ game?: string | string[] }> }) {
   if (!hasSupabaseConfig()) {
     return <BackendSetup />;
   }
@@ -34,12 +34,14 @@ export default async function Home() {
     );
   }
 
+  const params = await searchParams;
+  const requestedGameId = Array.isArray(params.game) ? params.game[0] : params.game;
+
   const { data: memberships, error: membershipError } = await supabase
     .from("group_members")
     .select("group_id, role, joined_at, groups(id, name, invite_code)")
     .eq("profile_id", user.id)
-    .order("joined_at", { ascending: true })
-    .limit(1);
+    .order("joined_at", { ascending: true });
 
   if (membershipError) {
     return (
@@ -50,7 +52,12 @@ export default async function Home() {
     );
   }
 
-  const membership = memberships?.[0];
+  const membership = memberships?.find(item => item.group_id === requestedGameId) ?? memberships?.[0];
+  const gameOptions = (memberships ?? []).map(item => {
+    const value = item.groups;
+    const optionGroup = Array.isArray(value) ? value[0] : value;
+    return { id: item.group_id, name: optionGroup?.name ?? "Goals Game" };
+  });
 
   if (!membership) {
     return <GroupSetup displayName={profile.display_name} />;
@@ -109,6 +116,7 @@ export default async function Home() {
       groupName={group?.name ?? "Goals Game"}
       inviteCode={group?.invite_code ?? ""}
       members={members}
+      gameOptions={gameOptions}
     />
   );
 }
