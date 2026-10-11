@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import SessionBar from "@/components/SessionBar";
+import WeekPlanner from "@/components/WeekPlanner";
 import { createClient } from "@/lib/supabase/client";
 
 type AssignedBy = "self" | "challenge";
@@ -210,6 +211,7 @@ export default function GameBoard({
   const [showEnvelopes, setShowEnvelopes] = useState(false);
   const [showPot, setShowPot] = useState(false);
   const [showWeekResult, setShowWeekResult] = useState(false);
+  const [showWeekPlanner, setShowWeekPlanner] = useState(false);
   const [potCents, setPotCents] = useState(0);
   const [potInput, setPotInput] = useState("");
   const [editingContribution, setEditingContribution] = useState(false);
@@ -1761,6 +1763,20 @@ export default function GameBoard({
           <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
             🏁 View last week&apos;s result
           </button>
+        )}
+
+        <button className="plannerLaunch" onClick={() => setShowWeekPlanner(true)}>
+          🗓️ Plan next week
+        </button>
+
+        {showWeekPlanner && (
+          <WeekPlanner
+            groupId={groupId}
+            currentUserId={currentUserId}
+            currentWeekStart={weekStart}
+            members={members}
+            onClose={() => setShowWeekPlanner(false)}
+          />
         )}
 
         {showPot && (
