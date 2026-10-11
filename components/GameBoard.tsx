@@ -174,7 +174,8 @@ export default function GameBoard({
   groupId,
   groupName,
   inviteCode,
-  members
+  members,
+  gameOptions
 }: {
   currentUserId: string;
   displayName: string;
@@ -182,6 +183,7 @@ export default function GameBoard({
   groupName: string;
   inviteCode: string;
   members: Member[];
+  gameOptions: Array<{ id: string; name: string }>;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const weekStart = useMemo(() => getWeekStart(), []);
@@ -1379,6 +1381,24 @@ export default function GameBoard({
             <button onClick={() => { setShowEnvelopes(false); setShowMenu(false); }}>Game</button>
             <button onClick={() => { setShowEnvelopes(true); setShowMenu(false); }}>Envelopes</button>
             <button onClick={() => setShowSettings(value => !value)} aria-expanded={showSettings}>Settings</button>
+            {gameOptions.length > 1 && (
+              <section className="gameSwitcher" aria-label="Switch game">
+                <span className="gameSwitcherLabel">Switch game</span>
+                <div className="gameSwitcherOptions">
+                  {gameOptions.map(option => (
+                    <a
+                      key={option.id}
+                      href={"/?game=" + encodeURIComponent(option.id)}
+                      className={"gameSwitcherOption " + (option.id === groupId ? "selected" : "")}
+                      aria-current={option.id === groupId ? "page" : undefined}
+                    >
+                      <span>{option.name}</span>
+                      {option.id === groupId && <small>Current</small>}
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
           </nav>
 
           {showSettings && (
