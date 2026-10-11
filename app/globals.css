@@ -586,7 +586,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 
 .envelopeChoices{margin-top:18px;text-align:left}
 .envelopeChoices>p{margin:0 0 8px;color:var(--accent-contrast);font-size:12px;font-weight:800;opacity:.78}
-.envelopeChoiceGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.envelopeChoiceGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;max-height:min(220px,32vh);overflow-y:auto;overscroll-behavior:contain;padding:2px 4px 2px 0;scrollbar-gutter:stable}
 .envelopeChoice{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:11px 12px;border:1px solid color-mix(in srgb,var(--accent-contrast) 24%,transparent);border-radius:14px;background:color-mix(in srgb,var(--accent-contrast) 8%,transparent);color:var(--accent-contrast);font:inherit;font-size:14px;font-weight:800;text-align:left;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
 .envelopeChoice:hover{background:color-mix(in srgb,var(--accent-contrast) 14%,transparent);border-color:color-mix(in srgb,var(--accent-contrast) 42%,transparent)}
 .envelopeChoice:active{transform:scale(.98)}
