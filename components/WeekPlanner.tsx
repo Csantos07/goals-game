@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type PlannerMember = { id: string; displayName: string };
@@ -141,7 +141,7 @@ export default function WeekPlanner({
     return () => { void supabase.removeChannel(channel); };
   }, [loadPlan, plan?.id, supabase]);
 
-  async function addIdea(event: React.FormEvent<HTMLFormElement>) {
+  async function addIdea(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!plan || plan.status !== "planning" || !idea.trim() || saving) return;
     setSaving(true);
