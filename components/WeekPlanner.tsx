@@ -65,6 +65,7 @@ export default function WeekPlanner({
   const [plan, setPlan] = useState<Plan | null>(null);
   const [entries, setEntries] = useState<PlanEntry[]>([]);
   const [idea, setIdea] = useState("");
+  const [memberFilter, setMemberFilter] = useState("both");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -214,6 +215,7 @@ export default function WeekPlanner({
   const ideas = entries.filter(entry => entry.entry_type === "idea");
   const drafts = entries.filter(entry => entry.entry_type === "draft");
   const selectedCount = drafts.filter(entry => entry.is_selected).length;
+  const visibleDrafts = memberFilter === "both" ? drafts : drafts.filter(entry => entry.player_id === memberFilter);
   const isStarted = plan?.status === "started";
 
   return (
@@ -299,11 +301,15 @@ export default function WeekPlanner({
                 </div>
                 <span>{selectedCount} selected</span>
               </div>
-              {drafts.length === 0 ? (
+              <div className="plannerMemberFilters" role="group" aria-label="Filter draft goals by player">
+                <button type="button" aria-pressed={memberFilter === "both"} onClick={() => setMemberFilter("both")}>Both</button>
+                {members.map(member => <button type="button" key={member.id} aria-pressed={memberFilter === member.id} onClick={() => setMemberFilter(member.id)}>{member.displayName}</button>)}
+              </div>
+              {visibleDrafts.length === 0 ? (
                 <p className="plannerEmpty">Turn an idea into a goal to start building next week.</p>
               ) : (
                 <ul className="plannerDraftList">
-                  {drafts.map(entry => {
+                  {visibleDrafts.map(entry => {
                     const playerId = entry.player_id ?? currentUserId;
                     const setBy = entry.assigned_by ?? playerId;
                     const otherMembers = members.filter(member => member.id !== playerId);
