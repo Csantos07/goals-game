@@ -592,8 +592,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .envelopeSelect option{background:#17191d;color:#fff}
 .envelopeSelectWrap>span{position:absolute;top:50%;right:14px;transform:translateY(-50%);pointer-events:none;color:var(--accent-contrast);font-size:20px;line-height:1}
 
-.plannerLaunch{display:block;width:min(560px,calc(100% - 32px));margin:0 auto 18px;padding:14px 18px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(135deg,var(--card),var(--card2));color:var(--text);font:inherit;font-weight:800;cursor:pointer;transition:transform .18s,border-color .18s}
-.plannerLaunch:hover{transform:translateY(-1px);border-color:var(--accent)}
+.plannerLaunch{display:block;width:100%;margin:14px 0 18px;padding:16px;border:0;border-radius:16px;background:var(--accent);color:var(--accent-contrast);font:inherit;font-size:15px;font-weight:900;cursor:pointer;transition:transform .18s,filter .18s}
+.plannerLaunch:hover{transform:translateY(-1px);filter:brightness(1.04)}
 .weeklyPlanner{position:fixed;inset:0;z-index:60;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);color:var(--text);padding:max(18px,env(safe-area-inset-top)) 18px max(30px,env(safe-area-inset-bottom))}
 .weeklyPlannerInner{width:min(840px,100%);margin:0 auto}
 .plannerBack{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;padding:8px 0;cursor:pointer}
