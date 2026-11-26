@@ -437,6 +437,7 @@ export default function GameBoard({
           .from("goals")
           .select("id, player_id, assigned_by, title, goal_type, points, completed_at, created_at")
           .eq("week_id", week.id)
+          .is("archived_at", null)
           .order("created_at", { ascending: true }),
         supabase
           .from("user_preferences")
@@ -658,7 +659,7 @@ export default function GameBoard({
     if (previousError || !previous) { settlementWeekId.current = null; setPotReady(false); return; }
     settlementWeekId.current = previous.id;
     const [goalResponse, contributionResponse, allocationResponse] = await Promise.all([
-      supabase.from("goals").select("id, player_id, goal_type, points, completed_at").eq("week_id", previous.id),
+      supabase.from("goals").select("id, player_id, goal_type, points, completed_at").eq("week_id", previous.id).is("archived_at", null),
       supabase.from("weekly_contributions").select("profile_id, amount_cents").eq("week_id", previous.id),
       supabase.from("weekly_allocations").select("profile_id, amount_cents").eq("week_id", previous.id)
     ]);
