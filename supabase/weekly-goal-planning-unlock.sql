@@ -1,4 +1,13 @@
--- Update the weekly plan lock flow and allow plans to be reopened before their start date.
+-- Reopen a locked weekly plan without discarding its generated goals.
+-- Archived planner goals stay in the database and are hidden from the active game.
+
+alter table public.goals
+  add column if not exists planner_plan_id uuid references public.weekly_plans(id) on delete set null,
+  add column if not exists archived_at timestamptz;
+
+create index if not exists goals_active_week_id_idx
+  on public.goals(week_id)
+  where archived_at is null;
 
 create or replace function public.start_weekly_plan(target_plan_id uuid)
 returns uuid
@@ -74,12 +83,15 @@ begin
     raise exception 'The planned week is already closed.';
   end if;
 
-  if exists (select 1 from public.goals where week_id = target_week_id) then
-    raise exception 'Goals already exist for this week. Remove them before starting this plan.';
+  if exists (
+    select 1 from public.goals
+    where week_id = target_week_id and archived_at is null
+  ) then
+    raise exception 'Active goals already exist for this week. Resolve them before starting this plan.';
   end if;
 
-  insert into public.goals (week_id, player_id, assigned_by, title, goal_type, points)
-  select target_week_id, player_id, assigned_by, trim(title), goal_type, points
+  insert into public.goals (week_id, player_id, assigned_by, title, goal_type, points, planner_plan_id)
+  select target_week_id, player_id, assigned_by, trim(title), goal_type, points, selected_plan.id
   from public.weekly_plan_entries
   where plan_id = selected_plan.id
     and entry_type = 'draft'
@@ -133,6 +145,7 @@ as $$
 declare
   selected_plan public.weekly_plans%rowtype;
   target_week_id uuid;
+  archived_count integer;
 begin
   if (select auth.uid()) is null then
     raise exception 'Sign in to unlock the next week.';
@@ -161,10 +174,31 @@ begin
 
   target_week_id := selected_plan.started_week_id;
 
+  if not exists (
+    select 1 from public.weeks w
+    where w.id = target_week_id
+      and w.group_id = selected_plan.group_id
+      and w.starts_on = selected_plan.starts_on
+      and w.status = 'active'
+  ) then
+    raise exception 'The planned week is no longer open.';
+  end if;
+
   if exists (
     select 1
     from public.goals g
     where g.week_id = target_week_id
+      and g.archived_at is null
+      and g.planner_plan_id is distinct from selected_plan.id
+  ) then
+    raise exception 'This week has goals outside the planner. Resolve them before unlocking.';
+  end if;
+
+  if exists (
+    select 1
+    from public.goals g
+    where g.week_id = target_week_id
+      and g.planner_plan_id = selected_plan.id
       and (
         g.completed_at is not null
         or exists (select 1 from public.goal_completions gc where gc.goal_id = g.id)
@@ -173,7 +207,16 @@ begin
     raise exception 'Goals with recorded progress cannot be unlocked.';
   end if;
 
-  delete from public.goals where week_id = target_week_id;
+  update public.goals
+  set archived_at = now()
+  where week_id = target_week_id
+    and planner_plan_id = selected_plan.id
+    and archived_at is null;
+
+  get diagnostics archived_count = row_count;
+  if archived_count = 0 then
+    raise exception 'No generated goals were found to unlock.';
+  end if;
 
   update public.weekly_plans
   set status = 'planning',
