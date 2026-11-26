@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "forgot";
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -21,6 +21,22 @@ export default function AuthScreen() {
     setMessage("");
 
     const supabase = createClient();
+
+    if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`
+      });
+
+      setBusy(false);
+
+      if (error) {
+        setMessage("We couldn't send the reset email. Please try again.");
+        return;
+      }
+
+      setMessage("If an account exists for that email, a password reset link has been sent. Check your inbox.");
+      return;
+    }
 
     if (mode === "signup") {
       const { data, error } = await supabase.auth.signUp({
@@ -63,31 +79,47 @@ export default function AuthScreen() {
     router.refresh();
   }
 
+  function changeMode(nextMode: Mode) {
+    setMode(nextMode);
+    setMessage("");
+    setPassword("");
+  }
+
+  const isForgotMode = mode === "forgot";
+
   return (
     <main className="authShell">
       <section className="authCard">
         <p className="authEyebrow">GOALS GAME</p>
-        <h1>{mode === "signin" ? "Welcome back." : "Create your player."}</h1>
+        <h1>{isForgotMode ? "Reset your password." : mode === "signin" ? "Welcome back." : "Create your player."}</h1>
         <p className="authIntro">
-          Sign in to keep your weekly game synced across devices and play with your group.
+          {isForgotMode
+            ? "Enter the email address for your account and we'll send you a secure reset link."
+            : "Sign in to keep your weekly game synced across devices and play with your group."}
         </p>
 
-        <div className="authTabs" role="tablist" aria-label="Account mode">
-          <button
-            type="button"
-            className={mode === "signin" ? "selected" : ""}
-            onClick={() => { setMode("signin"); setMessage(""); }}
-          >
-            Log in
+        {isForgotMode ? (
+          <button className="authRecoveryLink authBackLink" type="button" onClick={() => changeMode("signin")}>
+            Back to log in
           </button>
-          <button
-            type="button"
-            className={mode === "signup" ? "selected" : ""}
-            onClick={() => { setMode("signup"); setMessage(""); }}
-          >
-            Sign up
-          </button>
-        </div>
+        ) : (
+          <div className="authTabs" role="tablist" aria-label="Account mode">
+            <button
+              type="button"
+              className={mode === "signin" ? "selected" : ""}
+              onClick={() => changeMode("signin")}
+            >
+              Log in
+            </button>
+            <button
+              type="button"
+              className={mode === "signup" ? "selected" : ""}
+              onClick={() => changeMode("signup")}
+            >
+              Sign up
+            </button>
+          </div>
+        )}
 
         <form className="authForm" onSubmit={submit}>
           {mode === "signup" && (
@@ -114,24 +146,38 @@ export default function AuthScreen() {
             />
           </label>
 
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={event => setPassword(event.target.value)}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              required
-              minLength={6}
-              placeholder="••••••••"
-            />
-          </label>
+          {mode !== "forgot" && (
+            <label>
+              Password
+              <input
+                type="password"
+                value={password}
+                onChange={event => setPassword(event.target.value)}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                required
+                minLength={6}
+                placeholder="••••••••"
+              />
+            </label>
+          )}
 
           {message && <p className="authMessage" role="status">{message}</p>}
 
           <button className="authPrimary" disabled={busy}>
-            {busy ? "Working…" : mode === "signin" ? "Log in" : "Create account"}
+            {busy
+              ? "Working…"
+              : isForgotMode
+                ? "Send reset link"
+                : mode === "signin"
+                  ? "Log in"
+                  : "Create account"}
           </button>
+
+          {mode === "signin" && (
+            <button className="authRecoveryLink" type="button" onClick={() => changeMode("forgot")}>
+              Forgot password?
+            </button>
+          )}
         </form>
       </section>
     </main>

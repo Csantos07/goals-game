@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import SessionBar from "@/components/SessionBar";
+import WeekPlanner from "@/components/WeekPlanner";
 import { createClient } from "@/lib/supabase/client";
 
 type AssignedBy = "self" | "challenge";
@@ -210,6 +211,7 @@ export default function GameBoard({
   const [showEnvelopes, setShowEnvelopes] = useState(false);
   const [showPot, setShowPot] = useState(false);
   const [showWeekResult, setShowWeekResult] = useState(false);
+  const [showWeekPlanner, setShowWeekPlanner] = useState(false);
   const [potCents, setPotCents] = useState(0);
   const [potInput, setPotInput] = useState("");
   const [editingContribution, setEditingContribution] = useState(false);
@@ -435,6 +437,7 @@ export default function GameBoard({
           .from("goals")
           .select("id, player_id, assigned_by, title, goal_type, points, completed_at, created_at")
           .eq("week_id", week.id)
+          .is("archived_at", null)
           .order("created_at", { ascending: true }),
         supabase
           .from("user_preferences")
@@ -656,7 +659,7 @@ export default function GameBoard({
     if (previousError || !previous) { settlementWeekId.current = null; setPotReady(false); return; }
     settlementWeekId.current = previous.id;
     const [goalResponse, contributionResponse, allocationResponse] = await Promise.all([
-      supabase.from("goals").select("id, player_id, goal_type, points, completed_at").eq("week_id", previous.id),
+      supabase.from("goals").select("id, player_id, goal_type, points, completed_at").eq("week_id", previous.id).is("archived_at", null),
       supabase.from("weekly_contributions").select("profile_id, amount_cents").eq("week_id", previous.id),
       supabase.from("weekly_allocations").select("profile_id, amount_cents").eq("week_id", previous.id)
     ]);
@@ -1761,6 +1764,20 @@ export default function GameBoard({
           <button className="closeWeek" onClick={() => setShowWeekResult(true)}>
             🏁 View last week&apos;s result
           </button>
+        )}
+
+        <button className="plannerLaunch" onClick={() => setShowWeekPlanner(true)}>
+          🗓️ Plan next week
+        </button>
+
+        {showWeekPlanner && (
+          <WeekPlanner
+            groupId={groupId}
+            currentUserId={currentUserId}
+            currentWeekStart={weekStart}
+            members={members}
+            onClose={() => setShowWeekPlanner(false)}
+          />
         )}
 
         {showPot && (
