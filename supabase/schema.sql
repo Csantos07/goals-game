@@ -945,11 +945,18 @@ begin
     and starts_on = selected_plan.starts_on + 7;
 
   insert into public.weekly_plan_entries (plan_id, title, entry_type, created_by)
-  select next_plan_id, title, 'idea', created_by
-  from public.weekly_plan_entries
-  where plan_id = selected_plan.id
-    and entry_type = 'idea'
-  order by created_at;
+  select next_plan_id, source_entry.title, 'idea', source_entry.created_by
+  from public.weekly_plan_entries source_entry
+  where source_entry.plan_id = selected_plan.id
+    and source_entry.entry_type = 'idea'
+    and not exists (
+      select 1 from public.weekly_plan_entries existing_entry
+      where existing_entry.plan_id = next_plan_id
+        and existing_entry.entry_type = 'idea'
+        and existing_entry.title = source_entry.title
+        and existing_entry.created_by = source_entry.created_by
+    )
+  order by source_entry.created_at;
 
   update public.weekly_plans
   set status = 'started',
@@ -964,6 +971,71 @@ $$;
 
 revoke all on function public.start_weekly_plan(uuid) from public, anon;
 grant execute on function public.start_weekly_plan(uuid) to authenticated;
+
+create or replace function public.unlock_weekly_plan(target_plan_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  selected_plan public.weekly_plans%rowtype;
+  target_week_id uuid;
+begin
+  if (select auth.uid()) is null then
+    raise exception 'Sign in to unlock the next week.';
+  end if;
+
+  select * into selected_plan
+  from public.weekly_plans
+  where id = target_plan_id
+  for update;
+
+  if not found or not exists (
+    select 1 from public.group_members gm
+    where gm.group_id = selected_plan.group_id
+      and gm.profile_id = (select auth.uid())
+  ) then
+    raise exception 'Plan not found.';
+  end if;
+
+  if selected_plan.status <> 'started' or selected_plan.started_week_id is null then
+    raise exception 'This plan is not locked.';
+  end if;
+
+  if selected_plan.starts_on <= (now() at time zone 'America/Chicago')::date then
+    raise exception 'The week has already begun, so its goals can no longer be unlocked.';
+  end if;
+
+  target_week_id := selected_plan.started_week_id;
+
+  if exists (
+    select 1
+    from public.goals g
+    where g.week_id = target_week_id
+      and (
+        g.completed_at is not null
+        or exists (select 1 from public.goal_completions gc where gc.goal_id = g.id)
+      )
+  ) then
+    raise exception 'Goals with recorded progress cannot be unlocked.';
+  end if;
+
+  delete from public.goals where week_id = target_week_id;
+
+  update public.weekly_plans
+  set status = 'planning',
+      started_week_id = null,
+      started_at = null,
+      updated_at = now()
+  where id = selected_plan.id;
+
+  return target_week_id;
+end;
+$$;
+
+revoke all on function public.unlock_weekly_plan(uuid) from public, anon;
+grant execute on function public.unlock_weekly_plan(uuid) to authenticated;
 
 do $$
 begin

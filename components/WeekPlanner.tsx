@@ -69,6 +69,7 @@ export default function WeekPlanner({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -210,6 +211,25 @@ export default function WeekPlanner({
       await loadPlan();
     }
     setStarting(false);
+  }
+
+  async function unlockNextWeek() {
+    if (!plan || plan.status !== "started" || unlocking) return;
+    if (!window.confirm(`Unlock the goals for ${targetWeekLabel}? You can edit and lock them again before the week begins.`)) return;
+    setUnlocking(true);
+    setError("");
+    setNotice("");
+    const { error: unlockError } = await supabase.rpc("unlock_weekly_plan", {
+      target_plan_id: plan.id
+    });
+    if (unlockError) {
+      setError(unlockError.message);
+    } else {
+      setPlan({ ...plan, status: "planning", started_week_id: null });
+      setNotice("Plan unlocked. Edit the goals, then lock them again.");
+      await loadPlan();
+    }
+    setUnlocking(false);
   }
 
   const ideas = entries.filter(entry => entry.entry_type === "idea");
@@ -400,10 +420,10 @@ export default function WeekPlanner({
         {notice && <p className="plannerNotice" role="status">{notice}</p>}
 
         <footer className="plannerFooter">
-          <span>{isStarted ? "Next week has been prepared." : "Only selected draft goals move to next week."}</span>
-          <button type="button" className="plannerStart" onClick={() => void startNextWeek()}
-            disabled={loading || starting || isStarted || selectedCount === 0}>
-            {isStarted ? "Next week is ready" : starting ? "Starting…" : "Start next iteration"}
+          <span>{isStarted ? `Locked for ${targetWeekLabel}. You can unlock and edit before it begins.` : "Selected draft goals will be locked; unconverted ideas carry forward."}</span>
+          <button type="button" className="plannerStart" onClick={() => void (isStarted ? unlockNextWeek() : startNextWeek())}
+            disabled={loading || starting || unlocking || (!isStarted && selectedCount === 0)}>
+            {isStarted ? unlocking ? "Unlocking…" : "Unlock to edit" : starting ? "Locking…" : "Lock goals for next week"}
           </button>
         </footer>
       </div>
