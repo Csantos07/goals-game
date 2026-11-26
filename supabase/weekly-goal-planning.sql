@@ -139,6 +139,7 @@ as $$
 declare
   selected_plan public.weekly_plans%rowtype;
   target_week_id uuid;
+  next_plan_id uuid;
   selected_count integer;
 begin
   if (select auth.uid()) is null then
@@ -213,6 +214,23 @@ begin
   where plan_id = selected_plan.id
     and entry_type = 'draft'
     and is_selected
+  order by created_at;
+
+  -- Keep brainstorm ideas visible after the planner advances to the following week.
+  insert into public.weekly_plans (group_id, starts_on, created_by)
+  values (selected_plan.group_id, selected_plan.starts_on + 7, (select auth.uid()))
+  on conflict (group_id, starts_on) do nothing;
+
+  select id into next_plan_id
+  from public.weekly_plans
+  where group_id = selected_plan.group_id
+    and starts_on = selected_plan.starts_on + 7;
+
+  insert into public.weekly_plan_entries (plan_id, title, entry_type, created_by)
+  select next_plan_id, title, 'idea', created_by
+  from public.weekly_plan_entries
+  where plan_id = selected_plan.id
+    and entry_type = 'idea'
   order by created_at;
 
   update public.weekly_plans

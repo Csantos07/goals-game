@@ -231,7 +231,7 @@ export default function WeekPlanner({
 
         {isStarted && (
           <div className="plannerNotice">
-            This iteration is ready for {targetWeekLabel}. The current game stays here until the new week begins.
+            This iteration is ready for {targetWeekLabel}. The current game stays here until the new week begins. Your unconverted ideas will carry into the next planning round.
           </div>
         )}
 
@@ -260,7 +260,7 @@ export default function WeekPlanner({
               <div className="plannerSectionHead">
                 <div>
                   <h3 id="planner-ideas-title">Ideas</h3>
-                  <p>Keep rough thoughts here until you’re ready to make them goals.</p>
+                  <p>Keep rough thoughts here until you’re ready to make them goals. Unconverted ideas carry into the next planning round.</p>
                 </div>
                 <span>{ideas.length}</span>
               </div>
